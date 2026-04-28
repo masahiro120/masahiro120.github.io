@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家賃シミュレーター</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+
+<!-- 戻る -->
+<a href="../../index.html"
+   class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+  ← 戻る
+</a>
+
+<div class="max-w-2xl mx-auto">
+
+<h1 class="text-2xl md:text-3xl font-bold text-center mb-6">
+  家賃シミュレーター（万円）
+</h1>
+
+<div class="bg-white p-6 rounded-2xl shadow space-y-6">
+
+<!-- ラジオ -->
+<div class="flex flex-col md:flex-row gap-3 text-sm md:text-base">
+  <label><input type="radio" name="mode" value="rent_to_income" checked> 家賃→手取り</label>
+  <label><input type="radio" name="mode" value="income_to_rent"> 手取り→家賃</label>
+  <label><input type="radio" name="mode" value="income_to_ratio"> 手取り→割合</label>
+</div>
+
+<!-- 入力 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+  <input id="rent" type="number" placeholder="家賃"
+    class="p-3 border rounded-lg">
+
+  <input id="income" type="number" placeholder="手取り"
+    class="p-3 border rounded-lg">
+
+  <input id="ratio" type="number" placeholder="割合（例: 0.3）"
+    class="p-3 border rounded-lg">
+
+  <input id="subsidy" type="number" placeholder="家賃補助"
+    class="p-3 border rounded-lg">
+
+  <input id="tax" type="number" placeholder="補助の税金"
+    class="p-3 border rounded-lg">
+
+</div>
+
+<!-- ボタン -->
+<button onclick="calc()"
+  class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600">
+  計算
+</button>
+
+<!-- 出力 -->
+<pre id="output"
+  class="hidden bg-gray-100 p-4 rounded-lg border whitespace-pre-wrap"></pre>
+
+</div>
+</div>
+
+<script>
+function calc() {
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+
+  let rent = parseFloat(document.getElementById("rent").value);
+  let income = parseFloat(document.getElementById("income").value);
+  let ratio = parseFloat(document.getElementById("ratio").value);
+  let subsidy = parseFloat(document.getElementById("subsidy").value || 0);
+  let tax = parseFloat(document.getElementById("tax").value || 0);
+
+  const output = document.getElementById("output");
+  output.classList.remove("hidden");
+
+  let result = "";
+
+  // 共通
+  let realCost;
+
+  try {
+
+    if (mode === "rent_to_income") {
+
+      if (isNaN(rent) || isNaN(ratio)) throw "入力不足";
+
+      realCost = rent - subsidy + tax;
+      let needIncome = realCost / ratio;
+
+      result =
+        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
+        "必要手取り: " + needIncome.toFixed(2) + " 万円";
+
+    }
+
+    else if (mode === "income_to_rent") {
+
+      if (isNaN(income) || isNaN(ratio)) throw "入力不足";
+
+      realCost = income * ratio;
+      let rentCalc = realCost + subsidy - tax;
+
+      result =
+        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
+        "家賃目安: " + rentCalc.toFixed(2) + " 万円";
+
+    }
+
+    else {
+
+      if (isNaN(income) || isNaN(rent)) throw "入力不足";
+
+      realCost = rent - subsidy + tax;
+      let ratioCalc = realCost / income;
+
+      result =
+        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
+        "割合: " + (ratioCalc * 100).toFixed(1) + " %";
+
+    }
+
+  } catch (e) {
+    result = "入力を確認してください";
+  }
+
+  output.innerText = result;
+}
+</script>
+
+</body>
+</html>

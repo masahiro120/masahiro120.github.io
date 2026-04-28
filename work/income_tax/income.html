@@ -6,12 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/icon.png">
   <title>所得税計算</title>
-
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Pyodide -->
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
 </head>
 
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
@@ -46,126 +41,73 @@
       </div>
 
       <!-- ボタン -->
-      <button id="run" onclick="main()" disabled
-        class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition disabled:bg-gray-400">
+      <button onclick="main()"
+        class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition">
         計算する
       </button>
 
       <!-- 出力 -->
-      <!-- <pre id="output"
-           class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap">
-      </pre> -->
-      <div id="output" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4">
-      </div>
+      <div id="output" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
 
     </div>
   </div>
 
-  <script>
-    let pyodide;
+  <script type="module">
+    import {
+      calcEmploymentIncomeDeduction,
+      calcBasicDeduction,
+      calcIncomeTax
+    } from "./tax.js";
 
-    async function loadPyodideAndPackages() {
-      pyodide = await loadPyodide();
-      await pyodide.loadPackage(["matplotlib", "numpy"]);
-      document.getElementById("run").disabled = false;
-    }
-
-    async function main() {
-      while (!pyodide) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      let result = "";
-
-      let input_income = document.getElementById("input_income").value;
-
+    window.main = function () {
       const output = document.getElementById("output");
       output.classList.remove("hidden");
 
-      // 入力チェック
-      function isInvalid(v) {
-        return v === "" || isNaN(Number(v));
-      }
+      const input_income = Number(document.getElementById("input_income").value);
 
-      if (isInvalid(input_income)) {
+      if (!input_income || isNaN(input_income)) {
         output.innerHTML = `
-          <div class="text-red-500 text-center font-bold">入力を確認してください</div>
-        `;
+        <div class="text-red-500 text-center font-bold">
+          入力を確認してください
+        </div>
+      `;
         return;
       }
 
-      try {
-        const res = await fetch("py_program.py");
-        let code;
-        if (res.ok) {
-          code = "input_income = " + input_income + "\n" +
-            await res.text();
-        } else {
-          code = "print('Error: ファイルを読み込めません')";
-        }
+      let income = input_income;
 
-        pyodide.setStdout({
-          batched: (msg) => { result += msg + "\n"; }
-        });
+      const employment = calcEmploymentIncomeDeduction(income);
+      income -= employment;
 
-        await pyodide.runPythonAsync(code);
+      const basic = calcBasicDeduction(income);
+      income -= basic;
 
-      } catch (error) {
-        result = "エラー: " + error;
-      }
+      const tax = calcIncomeTax(income);
 
-      // output.innerText = result;
+      output.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">給与所得控除</div>
+          <div class="text-2xl font-bold text-blue-600">${employment.toFixed(2)} 万円</div>
+        </div>
 
-      // if (result.trim() !== "") {
-      //   output.classList.remove("hidden");
-      // }
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">基礎控除</div>
+          <div class="text-2xl font-bold text-blue-600">${basic.toFixed(2)} 万円</div>
+        </div>
 
-      if (result.trim() === "") return;
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">課税所得</div>
+          <div class="text-2xl font-bold text-blue-600">${income.toFixed(2)} 万円</div>
+        </div>
 
-      // 行ごとに分割
-      const lines = result.trim().split("\n");
-
-      let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
-
-      lines.forEach(line => {
-        if (!line.includes(":")) return;
-
-        const [label, value] = line.split(":");
-
-        html += `
-          <div class="bg-white p-4 rounded-lg shadow text-center">
-            <div class="text-gray-500">${label}</div>
-            <div class="text-2xl font-bold text-blue-600">
-              ${value}
-            </div>
-          </div>
-        `;
-      });
-
-      html += `</div>`;
-
-      output.innerHTML = html;
-      output.classList.remove("hidden");
-    }
-
-    loadPyodideAndPackages();
-
-    document.querySelectorAll("input").forEach(el => {
-      el.addEventListener("change", () => {
-        el.blur();
-      });
-
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") el.blur();
-      });
-    });
-
-    document.addEventListener("pointerdown", (e) => {
-      if (!e.target.closest("input")) {
-        document.activeElement?.blur();
-      }
-    });
-
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">所得税</div>
+          <div class="text-2xl font-bold text-green-600">${tax.toFixed(2)} 万円</div>
+        </div>
+      </div>
+    `;
+    };
   </script>
 
 </body>

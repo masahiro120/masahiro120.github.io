@@ -30,6 +30,13 @@
 
     <!-- カード -->
     <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+
+      <!-- ラジオ -->
+			<div class="flex flex-col md:flex-row gap-3 text-sm md:text-base">
+				<label><input type="radio" name="mode" value="before2027" checked> 2026年</label>
+				<label><input type="radio" name="mode" value="after2027"> 2027年以降</label>
+			</div>
+
       <!-- 入力 -->
       <div>
         <label class="block text-lg font-semibold mb-2 text-gray-700">
@@ -60,6 +67,7 @@
     import {
       calcEmploymentIncomeDeduction,
       calcBasicDeduction,
+      calcBasicDeduction2027,
       calcIncomeTax
     } from "./module.js";
 
@@ -83,7 +91,10 @@
       const employment = calcEmploymentIncomeDeduction(income);
       income = Math.max(0, income - employment);
 
-      const basic = calcBasicDeduction(income);
+      // const basic = calcBasicDeduction(income);
+      const basic = document.querySelector('input[name="mode"]:checked').value === "before2027"
+        ? calcBasicDeduction(income)
+        : calcBasicDeduction2027(income);
       income = Math.max(0, income - basic);
 
       const tax = calcIncomeTax(income);

@@ -18,6 +18,15 @@ export function calcBasicDeduction(income) {
   return 0;
 }
 
+export function calcBasicDeduction2027(income) {
+  if (income <= 132) return 95;
+  if (income <= 2350) return 58;
+  if (income <= 2400) return 48;
+  if (income <= 2450) return 32;
+  if (income <= 2500) return 16;
+  return 0;
+}
+
 export function calcIncomeTax(income) {
   if (income < 195) return income * 0.05;
   if (income < 330) return income * 0.1 - 9.75;

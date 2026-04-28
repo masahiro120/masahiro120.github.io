@@ -59,7 +59,9 @@
       </button>
 
       <!-- 出力 -->
-      <div id="output" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
+      <div id="output1" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
+      <div id="output2" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
+      <div id="output3" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
 
     </div>
   </div>
@@ -79,17 +81,27 @@
     } from "./module.js";
 
     window.main = function () {
-      const output = document.getElementById("output");
-      output.classList.remove("hidden");
+      const output1 = document.getElementById("output1");
+      output1.classList.remove("hidden");
+
+      const output2 = document.getElementById("output2");
+      output2.classList.remove("hidden");
+
+      const output3 = document.getElementById("output3");
+      output3.classList.remove("hidden");
 
       const input_income = Number(document.getElementById("input_income").value);
 
       if (!input_income || isNaN(input_income)) {
-        output.innerHTML = `
-        <div class="text-red-500 text-center font-bold">
-          入力を確認してください
-        </div>
-      `;
+        output1.innerHTML = `
+          <div class="text-red-500 text-center font-bold">
+            入力を確認してください
+          </div>
+        `;
+
+        document.getElementById("output2").classList.add("hidden");
+        document.getElementById("output3").classList.add("hidden");
+
         return;
       }
 
@@ -120,58 +132,65 @@
                         resident_dict[document.querySelector('input[name="resident"]:checked').value].perCapita
                       );
 
-      output.innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">給与所得控除</div>
-          <div class="text-2xl font-bold text-blue-600">${formatNumber(employment)} 万円</div>
-        </div>
+      output1.innerHTML = `
+        <h2 class="text-2xl font-bold mb-3 text-center text-gray-500">控除</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">給与所得控除</div>
+            <div class="text-2xl font-bold text-blue-600">${formatNumber(employment)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">基礎控除</div>
-          <div class="text-2xl font-bold text-blue-600">${formatNumber(basic)} 万円</div>
-        </div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">基礎控除</div>
+            <div class="text-2xl font-bold text-blue-600">${formatNumber(basic)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">課税所得</div>
-          <div class="text-2xl font-bold text-blue-600">${formatNumber(income)} 万円</div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">課税所得</div>
+            <div class="text-2xl font-bold text-blue-600">${formatNumber(income)} 万円</div>
+          </div>
         </div>
-      </div>
+      `;
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">健康保険料</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.health)} 万円</div>
-        </div>
+      output2.innerHTML = `
+        <h2 class="text-2xl font-bold mb-3 text-center text-gray-500">社会保険料</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">健康保険料</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.health)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">厚生年金</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.pension)} 万円</div>
-        </div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">厚生年金</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.pension)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">雇用保険料</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.employment)} 万円</div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">雇用保険料</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.employment)} 万円</div>
+          </div>
         </div>
-      </div>
+      `;
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">所得税</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
-        </div>
+      output3.innerHTML = `
+        <h2 class="text-2xl font-bold mb-3 text-center text-gray-500">税金</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">所得税</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">住民税</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(resident)} 万円</div>
-        </div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">住民税</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(resident)} 万円</div>
+          </div>
 
-        <div class="bg-white p-4 rounded-lg shadow text-center">
-          <div class="text-gray-500">社会保険料</div>
-          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.total)} 万円</div>
+          <div class="bg-white p-4 rounded-lg shadow text-center">
+            <div class="text-gray-500">社会保険料</div>
+            <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.total)} 万円</div>
+          </div>
         </div>
-      </div>
-    `;
+      `;
     };
 
     document.querySelectorAll("input").forEach(el => {

@@ -6,56 +6,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon.png">
-  <title>自作ツール一覧</title>
+  <title>My Tools</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-10">
 
   <h1 class="text-4xl font-bold text-center mb-10 text-gray-800">
-    自作ツール一覧
+    My Tools
   </h1>
 
   <div class="max-w-4xl mx-auto space-y-10">
 
-    <!-- 仕事系 -->
+    <!-- Work -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
-      <h2 class="text-2xl font-semibold mb-4 text-gray-700">仕事系</h2>
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Work</h2>
 
       <div class="space-y-3">
-        <a href="work/income_tax/income.html"
-          class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
-          所得税 計算
-        </a>
-        <a href="work/rent/rent.html"
-          class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
-          家賃シミュレーター
-        </a>
+        <div class="text-center">
+          <a href="work/income_tax/income.html"
+            class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+            所得税
+          </a>
+        </div>
+        <div class="text-center">
+          <a href="work/rent/rent.html"
+            class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+            家賃
+          </a>
+        </div>
       </div>
     </div>
 
     <div class="text-center">
       <button id="toggle-btn" onclick="toggleHobby()"
         class="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800">
-        趣味系を表示
+        Hobbyを表示
       </button>
     </div>
 
-    <!-- 趣味系 -->
+    <!-- Hobby -->
     <div id="hobby-section" class="bg-white rounded-2xl shadow-lg p-6 hidden">
 
-      <h2 class="text-2xl font-semibold mb-4 text-gray-700">趣味系</h2>
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Hobby</h2>
 
       <div class="space-y-3">
-        <a href="hobby/quadratic_function/quadratic.html"
-          class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
-          二次関数 最大最小値計算
-        </a>
+        <div class="text-center">
+          <a href="hobby/quadratic_function/quadratic.html"
+            class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+            二次関数 最大最小値計算
+          </a>
+        </div>
 
-        <a href="hobby/monster/fusion_tree.html"
-          class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
-          ゲーム
-        </a>
+        <div class="text-center">
+          <a href="hobby/monster/fusion_tree.html"
+            class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+            ゲーム
+          </a>
+        </div>
       </div>
 
     </div>
@@ -66,9 +74,9 @@
 
     <div class="bg-white rounded-xl p-6 w-80 shadow-lg text-center">
 
-      <h2 class="text-lg font-bold mb-4">パスワード入力</h2>
+      <h2 class="text-lg font-bold mb-4">Enter Password</h2>
 
-      <input type="password" id="password-input" class="w-full p-2 border rounded mb-4" placeholder="パスワード">
+      <input type="password" id="password-input" class="w-full p-2 border rounded mb-4" placeholder="password">
 
       <div class="flex gap-2">
         <button onclick="submitPassword()" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
@@ -76,7 +84,7 @@
         </button>
 
         <button onclick="closeModal()" class="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400">
-          キャンセル
+          Cancel
         </button>
       </div>
 
@@ -126,7 +134,7 @@
 
       section.classList.remove("hidden");
 
-      btn.textContent = "趣味系を非表示";
+      btn.textContent = "Hobbyを非表示";
       btn.classList.remove("bg-gray-700");
       btn.classList.add("bg-red-500", "hover:bg-red-600");
     }
@@ -137,7 +145,7 @@
 
       section.classList.add("hidden");
 
-      btn.textContent = "趣味系を表示";
+      btn.textContent = "Hobbyを表示";
       btn.classList.remove("bg-red-500", "hover:bg-red-600");
       btn.classList.add("bg-gray-700");
     }

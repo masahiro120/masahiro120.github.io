@@ -74,6 +74,7 @@
       calcBasicDeduction,
       calcBasicDeduction2027,
       calcIncomeTax,
+      calcInsurance,
       calcResidentTax
     } from "./module.js";
 
@@ -94,13 +95,17 @@
 
       let income = input_income;
 
+      const insurance = calcInsurance(income, 5.5);
+
       const employment = calcEmploymentIncomeDeduction(income);
       income = Math.max(0, income - employment);
 
       const basic = document.querySelector('input[name="mode"]:checked').value === "before2027"
-        ? calcBasicDeduction(income)
-        : calcBasicDeduction2027(income);
+      ? calcBasicDeduction(income)
+      : calcBasicDeduction2027(income);
+
       income = Math.max(0, income - basic);
+      income = Math.max(0, income - insurance.total);
 
       const tax = calcIncomeTax(income);
 
@@ -133,7 +138,24 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">健康保険料</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.health)} 万円</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">厚生年金</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.pension)} 万円</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">雇用保険料</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.employment)} 万円</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">所得税</div>
           <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
@@ -142,6 +164,11 @@
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">住民税</div>
           <div class="text-2xl font-bold text-green-600">${formatNumber(resident)} 万円</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">社会保険料</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.total)} 万円</div>
         </div>
       </div>
     `;

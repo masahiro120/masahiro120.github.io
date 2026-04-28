@@ -40,3 +40,39 @@ export function calcIncomeTax(income) {
 export function calcResidentTax(income, rate, perCapita) {
   return Math.max(0, income * rate + perCapita);
 }
+
+export function calcInsurance(income, bonus_months) {
+  const monthly = income / (12 + bonus_months);
+  const bonus = monthly * bonus_months;
+
+  // 🔥 内訳率（目安）
+  const healthRate = 0.05;   // 健康保険
+  const pensionRate = 0.0915; // 厚生年金
+  const employmentRate = 0.006; // 雇用保険
+
+  const totalRate =
+    healthRate + pensionRate + employmentRate;
+
+  // 月給分
+  const monthlyHealth = monthly * 12 * healthRate;
+  const monthlyPension = monthly * 12 * pensionRate;
+  const monthlyEmployment = monthly * 12 * employmentRate;
+
+  // ボーナス分
+  const bonusHealth = bonus * healthRate;
+  const bonusPension = bonus * pensionRate;
+  const bonusEmployment = bonus * employmentRate;
+
+  return {
+    health: monthlyHealth + bonusHealth,
+    pension: monthlyPension + bonusPension,
+    employment: monthlyEmployment + bonusEmployment,
+    total:
+      monthlyHealth +
+      monthlyPension +
+      monthlyEmployment +
+      bonusHealth +
+      bonusPension +
+      bonusEmployment
+  };
+}

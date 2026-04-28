@@ -114,7 +114,7 @@
   function submitPassword() {
     const input = document.getElementById("password-input").value;
 
-    if (input === "1234") {
+    if (input === "password") {
       if (pendingAction === "show") {
         showHobby();
       }
@@ -130,7 +130,7 @@
 
     section.classList.remove("hidden");
 
-    btn.textContent = "🔓 趣味系を非表示";
+    btn.textContent = "趣味系を非表示";
     btn.classList.remove("bg-gray-700");
     btn.classList.add("bg-red-500", "hover:bg-red-600");
   }
@@ -141,7 +141,7 @@
 
     section.classList.add("hidden");
 
-    btn.textContent = "🔒 趣味系を表示";
+    btn.textContent = "趣味系を表示";
     btn.classList.remove("bg-red-500", "hover:bg-red-600");
     btn.classList.add("bg-gray-700");
   }

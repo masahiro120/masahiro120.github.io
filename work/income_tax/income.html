@@ -139,21 +139,25 @@
 
     loadPyodideAndPackages();
 
-    document.querySelectorAll("input").forEach(el => {
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") el.blur();
-      });
+		document.querySelectorAll("input").forEach(el => {
+			el.addEventListener("change", () => {
+				el.blur();
+			});
+			
+			el.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") el.blur();
+			});
 
-      el.addEventListener("focusout", () => {
-        setTimeout(() => el.blur(), 0);
-      });
-    });
+			el.addEventListener("focusout", () => {
+				setTimeout(() => el.blur(), 0);
+			});
+		});
 
-    document.addEventListener("touchend", (e) => {
-      if (!e.target.closest("input")) {
-        document.activeElement?.blur();
-      }
-    });
+		document.addEventListener("touchend", (e) => {
+			if (!e.target.closest("input")) {
+				document.activeElement?.blur();
+			}
+		});
 
   </script>
 

@@ -186,7 +186,9 @@ export function drawGraph(a, p, q, min, max, maxPoints, minPoints) {
   const h = canvas.height;
 
   let xs = [];
-  for (let x = min; x <= max; x += (max - min) / 100) {
+  const steps = 500;
+  for (let i = 0; i <= steps; i++) {
+    let x = min + (max - min) * (i / steps);
     xs.push({ x, y: f(x) });
   }
 

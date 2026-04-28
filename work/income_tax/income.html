@@ -122,6 +122,22 @@
       </div>
     `;
     };
+
+    document.querySelectorAll("input").forEach(el => {
+			el.addEventListener("change", () => {
+				el.blur();
+			});
+
+			el.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") el.blur();
+			});
+		});
+
+		document.addEventListener("pointerdown", (e) => {
+			if (!e.target.closest("input")) {
+				document.activeElement?.blur();
+			}
+		});
   </script>
 
 </body>

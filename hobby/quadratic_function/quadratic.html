@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,8 +16,7 @@
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
 
   <!-- 戻る -->
-  <a href="../../index.html"
-     class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+  <a href="../../index.html" class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
     ← 戻る
   </a>
 
@@ -45,14 +45,13 @@
       <!-- 入力 -->
       <div class="grid grid-cols-2 gap-4">
 
-        <input id="varA" type="number" placeholder="a"
-          class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400">
+        <input id="varA" type="number" placeholder="a" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400">
 
-        <input id="varB" type="number" placeholder="b"
-          class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400" id="abc-form">
+        <input id="varB" type="number" placeholder="b" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+          id="abc-form">
 
-        <input id="varC" type="number" placeholder="c"
-          class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400" id="abc-form">
+        <input id="varC" type="number" placeholder="c" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
+          id="abc-form">
 
         <input id="varP" type="number" placeholder="p"
           class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 hidden" id="apq-form">
@@ -64,11 +63,9 @@
 
       <!-- 範囲 -->
       <div class="flex items-center gap-4 justify-center">
-        <input id="varN" type="number" placeholder="最小"
-          class="p-3 border rounded-lg w-32 text-center">
+        <input id="varN" type="number" placeholder="最小" class="p-3 border rounded-lg w-32 text-center">
         <span>〜</span>
-        <input id="varM" type="number" placeholder="最大"
-          class="p-3 border rounded-lg w-32 text-center">
+        <input id="varM" type="number" placeholder="最大" class="p-3 border rounded-lg w-32 text-center">
       </div>
 
       <!-- 注意 -->
@@ -77,95 +74,93 @@
       </div>
 
       <!-- ボタン -->
-      <button id="run"
-        onclick="main()"
-        disabled
+      <button id="run" onclick="main()" disabled
         class="w-full bg-green-500 text-white py-3 rounded-lg text-lg hover:bg-green-600 disabled:bg-gray-400">
         計算する
       </button>
 
       <!-- 出力 -->
-      <pre id="output"
-        class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap"></pre>
+      <pre id="output" class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap"></pre>
 
     </div>
   </div>
 
-<script>
-let pyodide;
+  <script>
+    let pyodide;
 
-// ラジオ切替
-document.querySelectorAll('input[name="formula"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    const isABC = document.getElementById("abc").checked;
+    // ラジオ切替
+    document.querySelectorAll('input[name="formula"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const isABC = document.getElementById("abc").checked;
 
-    document.getElementById("func_type").value = isABC ? "abc" : "apq";
+        document.getElementById("func_type").value = isABC ? "abc" : "apq";
 
-    // 表示切替
-    document.getElementById("varB").classList.toggle("hidden", !isABC);
-    document.getElementById("varC").classList.toggle("hidden", !isABC);
-    document.getElementById("varP").classList.toggle("hidden", isABC);
-    document.getElementById("varQ").classList.toggle("hidden", isABC);
-  });
-});
+        // 表示切替
+        document.getElementById("varB").classList.toggle("hidden", !isABC);
+        document.getElementById("varC").classList.toggle("hidden", !isABC);
+        document.getElementById("varP").classList.toggle("hidden", isABC);
+        document.getElementById("varQ").classList.toggle("hidden", isABC);
+      });
+    });
 
-async function loadPyodideAndPackages() {
-  pyodide = await loadPyodide();
-  await pyodide.loadPackage(["matplotlib", "numpy"]);
-  document.getElementById("run").disabled = false;
-}
+    async function loadPyodideAndPackages() {
+      pyodide = await loadPyodide();
+      await pyodide.loadPackage(["matplotlib", "numpy"]);
+      document.getElementById("run").disabled = false;
+    }
 
-async function main() {
-  const output = document.getElementById("output");
-  output.classList.add("hidden");
+    async function main() {
+      const output = document.getElementById("output");
+      output.classList.add("hidden");
 
-  while (!pyodide) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
+      while (!pyodide) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-  let result = "";
+      let result = "";
 
-  let func_type = document.getElementById("func_type").value;
+      let func_type = document.getElementById("func_type").value;
 
-  let a = parseFloat(varA.value);
-  let b = parseFloat(varB.value || 0);
-  let c = parseFloat(varC.value || 0);
-  let p = parseFloat(varP.value || 0);
-  let q = parseFloat(varQ.value || 0);
-  let n = parseFloat(varN.value);
-  let m = parseFloat(varM.value);
+      let a = parseFloat(varA.value);
+      let b = parseFloat(varB.value || 0);
+      let c = parseFloat(varC.value || 0);
+      let p = parseFloat(varP.value || 0);
+      let q = parseFloat(varQ.value || 0);
+      let n = parseFloat(varN.value);
+      let m = parseFloat(varM.value);
 
-  if (!a || isNaN(n) || isNaN(m)) {
-    output.innerText = "入力を確認してください";
-    output.classList.remove("hidden");
-    return;
-  }
+      if (!a || isNaN(n) || isNaN(m)) {
+        output.innerText = "入力を確認してください";
+        output.classList.remove("hidden");
+        return;
+      }
 
-  if (a === 0 || n >= m) {
-    output.innerText = "値が不正です";
-    output.classList.remove("hidden");
-    return;
-  }
+      if (a === 0 || n >= m) {
+        output.innerText = "値が不正です";
+        output.classList.remove("hidden");
+        return;
+      }
 
-  try {
-    const res = await fetch("py_program.py");
-    let code = res.ok
-      ? `a=${a}\nb=${b}\nc=${c}\np=${p}\nq=${q}\nn=${n}\nm=${m}\nfunc_type='${func_type}'\n` + await res.text()
-      : "print('読み込みエラー')";
+      try {
+        const res = await fetch("py_program.py");
+        let code = res.ok
+          ? `a=${a}\nb=${b}\nc=${c}\np=${p}\nq=${q}\nn=${n}\nm=${m}\nfunc_type='${func_type}'\n` + await res.text()
+          : "print('読み込みエラー')";
 
-    pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
-    await pyodide.runPythonAsync(code);
+        pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
+        await pyodide.runPythonAsync(code);
 
-  } catch (e) {
-    result = "エラー: " + e;
-  }
+      } catch (e) {
+        result = "エラー: " + e;
+      }
 
-  output.innerText = result;
-  output.classList.remove("hidden");
-}
+      output.innerText = result;
+      output.classList.remove("hidden");
+    }
 
-loadPyodideAndPackages();
-</script>
+    loadPyodideAndPackages();
+  </script>
 
 </body>
+
 </html>

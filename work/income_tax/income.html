@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,8 +26,7 @@
       </h1>
 
       <!-- 戻る（右寄せ） -->
-      <a href="../../index.html"
-        class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+      <a href="../../index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
         ← 戻る
       </a>
 
@@ -40,15 +40,13 @@
           年収（万円）
         </label>
         <input type="number" id="input_income"
-               class="w-full text-xl p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-               placeholder="例：500">
+          class="w-full text-xl p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="例：500">
       </div>
 
       <!-- ボタン -->
-      <button id="run"
-              onclick="main()"
-              disabled
-              class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition disabled:bg-gray-400">
+      <button id="run" onclick="main()" disabled
+        class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition disabled:bg-gray-400">
         計算する
       </button>
 
@@ -56,8 +54,7 @@
       <!-- <pre id="output"
            class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap">
       </pre> -->
-      <div id="output"
-        class="hidden bg-gray-50 p-6 rounded-xl border space-y-4">
+      <div id="output" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4">
       </div>
 
     </div>
@@ -90,7 +87,7 @@
         let code;
         if (res.ok) {
           code = "input_income = " + input_income + "\n" +
-                 await res.text();
+            await res.text();
         } else {
           code = "print('Error: ファイルを読み込めません')";
         }
@@ -111,7 +108,7 @@
       //   output.classList.remove("hidden");
       // }
 
-        if (result.trim() === "") return;
+      if (result.trim() === "") return;
 
       // 行ごとに分割
       const lines = result.trim().split("\n");
@@ -140,7 +137,25 @@
     }
 
     loadPyodideAndPackages();
+
+    document.querySelectorAll("input").forEach(el => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") el.blur();
+      });
+
+      el.addEventListener("focusout", () => {
+        setTimeout(() => el.blur(), 0);
+      });
+    });
+
+    document.addEventListener("touchend", (e) => {
+      if (!e.target.closest("input")) {
+        document.activeElement?.blur();
+      }
+    });
+
   </script>
 
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,8 +16,7 @@
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
 
   <!-- 戻る -->
-  <a href="../../index.html"
-     class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+  <a href="../../index.html" class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
     ← 戻る
   </a>
 
@@ -46,98 +46,95 @@
 
       <!-- 入力 -->
       <div id="target-form">
-        <input type="text" id="input_monster_name"
-          placeholder="モンスター名を入力"
+        <input type="text" id="input_monster_name" placeholder="モンスター名を入力"
           class="w-full p-3 text-lg border rounded-lg focus:ring-2 focus:ring-blue-400">
       </div>
 
       <!-- ボタン -->
-      <button id="run"
-        onclick="main()"
-        disabled
+      <button id="run" onclick="main()" disabled
         class="w-full bg-green-500 text-white py-3 rounded-lg text-lg hover:bg-green-600 disabled:bg-gray-400">
         検索する
       </button>
 
       <!-- 出力 -->
-      <pre id="output"
-        class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre overflow-x-auto"></pre>
+      <pre id="output" class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre overflow-x-auto"></pre>
 
     </div>
   </div>
 
-<script>
-let pyodide;
+  <script>
+    let pyodide;
 
-// ラジオ切替
-document.querySelectorAll('input[name="formula"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    const isTarget = document.getElementById("target").checked;
-    document.getElementById("target-form").classList.toggle("hidden", !isTarget);
-    document.getElementById("func_type").value = isTarget ? "target" : "all";
-  });
-});
+    // ラジオ切替
+    document.querySelectorAll('input[name="formula"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const isTarget = document.getElementById("target").checked;
+        document.getElementById("target-form").classList.toggle("hidden", !isTarget);
+        document.getElementById("func_type").value = isTarget ? "target" : "all";
+      });
+    });
 
-async function loadPyodideAndPackages() {
-  pyodide = await loadPyodide();
-  await pyodide.loadPackage("micropip");
-  await pyodide.runPythonAsync(`
+    async function loadPyodideAndPackages() {
+      pyodide = await loadPyodide();
+      await pyodide.loadPackage("micropip");
+      await pyodide.runPythonAsync(`
 import micropip
 await micropip.install("anytree")
 `);
-  document.getElementById("run").disabled = false;
-}
-
-async function loadCsvInPyodide(filename, url) {
-  const response = await fetch(url);
-  const text = await response.text();
-  pyodide.FS.writeFile(filename, text);
-}
-
-async function main() {
-  const output = document.getElementById("output");
-  output.innerText = "";
-  output.classList.add("hidden");
-
-  while (!pyodide) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  let result = "";
-
-  let func_type = document.getElementById("func_type").value;
-  let input_monster_name = document.getElementById("input_monster_name").value;
-
-  if (func_type === "target" && input_monster_name.trim() === "") {
-    output.innerText = "モンスター名を入力してください";
-    output.classList.remove("hidden");
-    return;
-  }
-
-  try {
-    const ranks = ["F","E","D","C","B","A","S","SS"];
-    for (let r of ranks) {
-      await loadCsvInPyodide(`${r}_rank.csv`, `./monsters_list/${r}_rank.csv`);
+      document.getElementById("run").disabled = false;
     }
 
-    const res = await fetch("py_program_v2.py");
-    let code = res.ok
-      ? `func_type='${func_type}'\ntarget='${input_monster_name}'\n` + await res.text()
-      : "print('読み込みエラー')";
+    async function loadCsvInPyodide(filename, url) {
+      const response = await fetch(url);
+      const text = await response.text();
+      pyodide.FS.writeFile(filename, text);
+    }
 
-    pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
-    await pyodide.runPythonAsync(code);
+    async function main() {
+      const output = document.getElementById("output");
+      output.innerText = "";
+      output.classList.add("hidden");
 
-  } catch (e) {
-    result = "エラー: " + e;
-  }
+      while (!pyodide) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-  output.innerText = result;
-  output.classList.remove("hidden");
-}
+      let result = "";
 
-loadPyodideAndPackages();
-</script>
+      let func_type = document.getElementById("func_type").value;
+      let input_monster_name = document.getElementById("input_monster_name").value;
+
+      if (func_type === "target" && input_monster_name.trim() === "") {
+        output.innerText = "モンスター名を入力してください";
+        output.classList.remove("hidden");
+        return;
+      }
+
+      try {
+        const ranks = ["F", "E", "D", "C", "B", "A", "S", "SS"];
+        for (let r of ranks) {
+          await loadCsvInPyodide(`${r}_rank.csv`, `./monsters_list/${r}_rank.csv`);
+        }
+
+        const res = await fetch("py_program_v2.py");
+        let code = res.ok
+          ? `func_type='${func_type}'\ntarget='${input_monster_name}'\n` + await res.text()
+          : "print('読み込みエラー')";
+
+        pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
+        await pyodide.runPythonAsync(code);
+
+      } catch (e) {
+        result = "エラー: " + e;
+      }
+
+      output.innerText = result;
+      output.classList.remove("hidden");
+    }
+
+    loadPyodideAndPackages();
+  </script>
 
 </body>
+
 </html>

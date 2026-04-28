@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,27 +22,25 @@
 
       <div class="space-y-3">
         <a href="work/income_tax/income.html"
-           class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+          class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
           所得税 計算
         </a>
         <a href="work/rent/rent.html"
-           class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+          class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
           家賃シミュレーター
         </a>
       </div>
     </div>
 
     <div class="text-center">
-      <button id="toggle-btn"
-        onclick="toggleHobby()"
+      <button id="toggle-btn" onclick="toggleHobby()"
         class="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800">
         趣味系を表示
       </button>
     </div>
 
     <!-- 趣味系 -->
-    <div id="hobby-section"
-        class="bg-white rounded-2xl shadow-lg p-6 hidden">
+    <div id="hobby-section" class="bg-white rounded-2xl shadow-lg p-6 hidden">
 
       <h2 class="text-2xl font-semibold mb-4 text-gray-700">趣味系</h2>
 
@@ -61,25 +60,20 @@
 
   </div>
 
-  <div id="password-modal"
-     class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+  <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
 
     <div class="bg-white rounded-xl p-6 w-80 shadow-lg text-center">
 
       <h2 class="text-lg font-bold mb-4">パスワード入力</h2>
 
-      <input type="password" id="password-input"
-            class="w-full p-2 border rounded mb-4"
-            placeholder="パスワード">
+      <input type="password" id="password-input" class="w-full p-2 border rounded mb-4" placeholder="パスワード">
 
       <div class="flex gap-2">
-        <button onclick="submitPassword()"
-          class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+        <button onclick="submitPassword()" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
           OK
         </button>
 
-        <button onclick="closeModal()"
-          class="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400">
+        <button onclick="closeModal()" class="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400">
           キャンセル
         </button>
       </div>
@@ -88,63 +82,80 @@
   </div>
 
   <script>
-  let pendingAction = null;
+    let pendingAction = null;
 
-  function toggleHobby() {
-    const section = document.getElementById("hobby-section");
+    function toggleHobby() {
+      const section = document.getElementById("hobby-section");
 
-    if (section.classList.contains("hidden")) {
-      openModal("show");
-    } else {
-      hideHobby();
-    }
-  }
-
-  function openModal(action) {
-    pendingAction = action;
-    document.getElementById("password-modal").classList.remove("hidden");
-    document.getElementById("password-modal").classList.add("flex");
-    document.getElementById("password-input").value = "";
-  }
-
-  function closeModal() {
-    document.getElementById("password-modal").classList.add("hidden");
-  }
-
-  function submitPassword() {
-    const input = document.getElementById("password-input").value;
-
-    if (input === "password") {
-      if (pendingAction === "show") {
-        showHobby();
+      if (section.classList.contains("hidden")) {
+        openModal("show");
+      } else {
+        hideHobby();
       }
-      closeModal();
-    } else {
-      alert("パスワードが違います");
     }
-  }
 
-  function showHobby() {
-    const section = document.getElementById("hobby-section");
-    const btn = document.getElementById("toggle-btn");
+    function openModal(action) {
+      pendingAction = action;
+      document.getElementById("password-modal").classList.remove("hidden");
+      document.getElementById("password-modal").classList.add("flex");
+      document.getElementById("password-input").value = "";
+    }
 
-    section.classList.remove("hidden");
+    function closeModal() {
+      document.getElementById("password-modal").classList.add("hidden");
+    }
 
-    btn.textContent = "趣味系を非表示";
-    btn.classList.remove("bg-gray-700");
-    btn.classList.add("bg-red-500", "hover:bg-red-600");
-  }
+    function submitPassword() {
+      const input = document.getElementById("password-input").value;
 
-  function hideHobby() {
-    const section = document.getElementById("hobby-section");
-    const btn = document.getElementById("toggle-btn");
+      if (input === "password") {
+        if (pendingAction === "show") {
+          showHobby();
+        }
+        closeModal();
+      } else {
+        alert("パスワードが違います");
+      }
+    }
 
-    section.classList.add("hidden");
+    function showHobby() {
+      const section = document.getElementById("hobby-section");
+      const btn = document.getElementById("toggle-btn");
 
-    btn.textContent = "趣味系を表示";
-    btn.classList.remove("bg-red-500", "hover:bg-red-600");
-    btn.classList.add("bg-gray-700");
-  }
+      section.classList.remove("hidden");
+
+      btn.textContent = "趣味系を非表示";
+      btn.classList.remove("bg-gray-700");
+      btn.classList.add("bg-red-500", "hover:bg-red-600");
+    }
+
+    function hideHobby() {
+      const section = document.getElementById("hobby-section");
+      const btn = document.getElementById("toggle-btn");
+
+      section.classList.add("hidden");
+
+      btn.textContent = "趣味系を表示";
+      btn.classList.remove("bg-red-500", "hover:bg-red-600");
+      btn.classList.add("bg-gray-700");
+    }
+
+    document.querySelectorAll("input").forEach(el => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") el.blur();
+      });
+
+      el.addEventListener("focusout", () => {
+        setTimeout(() => el.blur(), 0);
+      });
+    });
+
+    document.addEventListener("touchend", (e) => {
+      if (!e.target.closest("input")) {
+        document.activeElement?.blur();
+      }
+    });
   </script>
 </body>
+
 </html>

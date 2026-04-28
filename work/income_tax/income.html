@@ -3,47 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <title>所得税計算</title>
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      text-align: center;
-    }
-    .form-wrapper {
-      display: inline-block;   /* 横幅は内容に応じる */
-      text-align: left;        /* 内部は左揃え */
-    }
-    #output {
-      background-color: #f0f0f0;
-      padding: 10px;
-      border: 1px solid #ccc;
-      white-space: pre-wrap; /* Preserve whitespace and line breaks */
-      font-size: 18px; /* フォントサイズを大きく */
-      text-align: left;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-</head>
-<body>
-  <h1>所得税 計算</h1>
 
-  <div class="form-wrapper">
-    <div>
-      <label for="input_income" style="font-size: 24px;">年収:</label>
-      <input type="text" id="input_income" style="font-size: 40px; width: 100px;">
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+
+  <!-- 戻るボタン -->
+  <a href="../../index.html"
+     class="fixed top-5 right-5 bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+    ← 戻る
+  </a>
+
+  <div class="max-w-2xl mx-auto">
+
+    <!-- タイトル -->
+    <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+      所得税 計算
+    </h1>
+
+    <!-- カード -->
+    <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+
+      <!-- 入力 -->
+      <div>
+        <label class="block text-lg font-semibold mb-2 text-gray-700">
+          年収（円）
+        </label>
+        <input type="number" id="input_income"
+               class="w-full text-xl p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+               placeholder="例：5000000">
+      </div>
+
+      <!-- ボタン -->
+      <button id="run"
+              onclick="main()"
+              disabled
+              class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition disabled:bg-gray-400">
+        計算する
+      </button>
+
+      <!-- 出力 -->
+      <pre id="output"
+           class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap"></pre>
+
     </div>
-    <br>
   </div>
 
-  <br><br>
-
-  <button id="run" onclick="main()" disabled style="font-size: 24px; padding: 10px 20px;">実行</button>
-  
-  <pre id="output" class="hidden"></pre>
-  <script type="text/javascript">
+  <script>
     let pyodide;
 
     async function loadPyodideAndPackages() {
@@ -55,11 +66,12 @@
     async function main() {
       const output = document.getElementById("output");
       output.innerText = "";
-      output.classList.add("hidden"); 
+      output.classList.add("hidden");
+
       while (!pyodide) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
+
       let result = "";
 
       let input_income = parseFloat(document.getElementById("input_income").value);
@@ -74,7 +86,10 @@
           code = "print('Error: ファイルを読み込めません')";
         }
 
-        pyodide.setStdout({ batched: (msg) => { result += msg + "\n"; } });
+        pyodide.setStdout({
+          batched: (msg) => { result += msg + "\n"; }
+        });
+
         await pyodide.runPythonAsync(code);
 
       } catch (error) {
@@ -82,6 +97,7 @@
       }
 
       output.innerText = result;
+
       if (result.trim() !== "") {
         output.classList.remove("hidden");
       }
@@ -89,29 +105,6 @@
 
     loadPyodideAndPackages();
   </script>
+
 </body>
-
-<br><br>
-
-<style>
-  #back-button {
-    position: fixed;   /* 画面に固定 */
-    top: 20px;         /* 上から20px */
-    right: 20px;        /* 右から20px */
-    font-size: 20px;
-    padding: 5px 10px;
-    background-color: #eee;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    text-decoration: none;
-    color: #000;
-    z-index: 1000;     /* 他の要素より前に表示 */
-  }
-  #back-button:hover {
-    background-color: #ddd;
-  }
-</style>
-
-<a href="../../index.html" id="back-button">目次に戻る</a>
-
 </html>

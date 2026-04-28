@@ -16,20 +16,20 @@
 
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
 
-	<div class="max-w-2xl mx-auto">
+  <div class="max-w-2xl mx-auto">
 
-		<!-- ヘッダー -->
-		<div class="flex items-center mb-6">
+    <!-- ヘッダー -->
+    <div class="flex items-center mb-6">
 
-			<h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-				二次関数 最大最小値計算
-			</h1>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+        二次関数 最大最小値計算
+      </h1>
 
-			<a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
-				← 戻る
-			</a>
+      <a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+        ← 戻る
+      </a>
 
-		</div>
+    </div>
 
     <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
 
@@ -89,98 +89,106 @@
 
     </div>
 
-  <script>
-    let pyodide;
+    <script>
+      let pyodide;
 
-    // ラジオ切替
-    document.querySelectorAll('input[name="formula"]').forEach(radio => {
-      radio.addEventListener('change', () => {
-        const isABC = document.getElementById("abc").checked;
+      // ラジオ切替
+      document.querySelectorAll('input[name="formula"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          const isABC = document.getElementById("abc").checked;
 
-        document.getElementById("func_type").value = isABC ? "abc" : "apq";
+          document.getElementById("func_type").value = isABC ? "abc" : "apq";
 
-        // 表示切替
-        document.getElementById("varB").classList.toggle("hidden", !isABC);
-        document.getElementById("varC").classList.toggle("hidden", !isABC);
-        document.getElementById("varP").classList.toggle("hidden", isABC);
-        document.getElementById("varQ").classList.toggle("hidden", isABC);
+          // 表示切替
+          document.getElementById("varB").classList.toggle("hidden", !isABC);
+          document.getElementById("varC").classList.toggle("hidden", !isABC);
+          document.getElementById("varP").classList.toggle("hidden", isABC);
+          document.getElementById("varQ").classList.toggle("hidden", isABC);
+        });
       });
-    });
 
-    async function loadPyodideAndPackages() {
-      pyodide = await loadPyodide();
-      await pyodide.loadPackage(["matplotlib", "numpy"]);
-      document.getElementById("run").disabled = false;
-    }
-
-    async function main() {
-      const output = document.getElementById("output");
-      output.classList.add("hidden");
-
-      while (!pyodide) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      async function loadPyodideAndPackages() {
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage(["matplotlib", "numpy"]);
+        document.getElementById("run").disabled = false;
       }
 
-      let result = "";
+      async function main() {
+        const output = document.getElementById("output");
+        output.classList.add("hidden");
 
-      let func_type = document.getElementById("func_type").value;
+        while (!pyodide) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
 
-      let a = parseFloat(varA.value);
-      let b = parseFloat(varB.value || 0);
-      let c = parseFloat(varC.value || 0);
-      let p = parseFloat(varP.value || 0);
-      let q = parseFloat(varQ.value || 0);
-      let n = parseFloat(varN.value);
-      let m = parseFloat(varM.value);
+        let result = "";
 
-      if (!a || isNaN(n) || isNaN(m)) {
-        output.innerText = "入力を確認してください";
+        let func_type = document.getElementById("func_type").value;
+
+        let a = parseFloat(varA.value);
+        let b = parseFloat(varB.value || 0);
+        let c = parseFloat(varC.value || 0);
+        let p = parseFloat(varP.value || 0);
+        let q = parseFloat(varQ.value || 0);
+        let n = parseFloat(varN.value);
+        let m = parseFloat(varM.value);
+
+        if (!a || isNaN(n) || isNaN(m)) {
+          output.innerHTML = `
+          <div class="text-red-500 text-center font-bold">
+            入力を確認してください
+          </div>
+        `;
+          output.classList.remove("hidden");
+          return;
+        }
+
+        if (a === 0 || n >= m) {
+          output.innerHTML = `
+          <div class="text-red-500 text-center font-bold">
+            値が不正です
+          </div>
+        `;
+          output.classList.remove("hidden");
+          return;
+        }
+
+        try {
+          const res = await fetch("py_program.py");
+          let code = res.ok
+            ? `a=${a}\nb=${b}\nc=${c}\np=${p}\nq=${q}\nn=${n}\nm=${m}\nfunc_type='${func_type}'\n` + await res.text()
+            : "print('読み込みエラー')";
+
+          pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
+          await pyodide.runPythonAsync(code);
+
+        } catch (e) {
+          result = "エラー: " + e;
+        }
+
+        output.innerText = result;
         output.classList.remove("hidden");
-        return;
       }
 
-      if (a === 0 || n >= m) {
-        output.innerText = "値が不正です";
-        output.classList.remove("hidden");
-        return;
-      }
+      loadPyodideAndPackages();
 
-      try {
-        const res = await fetch("py_program.py");
-        let code = res.ok
-          ? `a=${a}\nb=${b}\nc=${c}\np=${p}\nq=${q}\nn=${n}\nm=${m}\nfunc_type='${func_type}'\n` + await res.text()
-          : "print('読み込みエラー')";
+      document.querySelectorAll("input").forEach(el => {
+        el.addEventListener("change", () => {
+          el.blur();
+        });
 
-        pyodide.setStdout({ batched: (msg) => result += msg + "\n" });
-        await pyodide.runPythonAsync(code);
-
-      } catch (e) {
-        result = "エラー: " + e;
-      }
-
-      output.innerText = result;
-      output.classList.remove("hidden");
-    }
-
-    loadPyodideAndPackages();
-
-    document.querySelectorAll("input").forEach(el => {
-      el.addEventListener("change", () => {
-        el.blur();
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") el.blur();
+        });
       });
 
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") el.blur();
+      document.addEventListener("pointerdown", (e) => {
+        if (!e.target.closest("input")) {
+          document.activeElement?.blur();
+        }
       });
-    });
 
-    document.addEventListener("pointerdown", (e) => {
-      if (!e.target.closest("input")) {
-        document.activeElement?.blur();
-      }
-    });
-
-  </script>
+    </script>
 
 </body>
 

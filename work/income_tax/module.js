@@ -36,3 +36,7 @@ export function calcIncomeTax(income) {
   if (income < 4000) return income * 0.4 - 279.6;
   return income * 0.45 - 479.6;
 }
+
+export function calcResidentTax(income, rate, perCapita) {
+  return Math.max(0, income * rate + perCapita);
+}

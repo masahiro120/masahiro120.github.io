@@ -37,6 +37,11 @@
 				<label><input type="radio" name="mode" value="after2027"> 2027年以降</label>
 			</div>
 
+      <!-- ラジオ -->
+			<div class="flex flex-col md:flex-row gap-3 text-sm md:text-base">
+				<label><input type="radio" name="resident" value="yokohama" checked> 横浜市</label>
+			</div>
+
       <!-- 入力 -->
       <div>
         <label class="block text-lg font-semibold mb-2 text-gray-700">
@@ -68,7 +73,8 @@
       calcEmploymentIncomeDeduction,
       calcBasicDeduction,
       calcBasicDeduction2027,
-      calcIncomeTax
+      calcIncomeTax,
+      calcResidentTax
     } from "./module.js";
 
     window.main = function () {
@@ -98,8 +104,19 @@
 
       const tax = calcIncomeTax(income);
 
+      // 辞書形式でyokohamaがキー
+      const resident_dict = {
+        yokohama: { rate: 0.1, perCapita: 0.5 }
+      };
+
+      const resident = calcResidentTax(
+                        income,
+                        resident_dict[document.querySelector('input[name="resident"]:checked').value].rate,
+                        resident_dict[document.querySelector('input[name="resident"]:checked').value].perCapita
+                      );
+
       output.innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">給与所得控除</div>
           <div class="text-2xl font-bold text-blue-600">${formatNumber(employment)} 万円</div>
@@ -114,10 +131,17 @@
           <div class="text-gray-500">課税所得</div>
           <div class="text-2xl font-bold text-blue-600">${formatNumber(income)} 万円</div>
         </div>
+      </div>
 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">所得税</div>
           <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <div class="text-gray-500">住民税</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(resident)} 万円</div>
         </div>
       </div>
     `;

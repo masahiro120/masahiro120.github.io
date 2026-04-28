@@ -146,10 +146,6 @@
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter") el.blur();
       });
-
-      el.addEventListener("focusout", () => {
-        setTimeout(() => el.blur(), 0);
-      });
     });
 
     document.addEventListener("pointerdown", (e) => {

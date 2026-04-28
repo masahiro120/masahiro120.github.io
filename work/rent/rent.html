@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="/icon.png">
+	<link rel="icon" type="image/png" href="/icon.png">
 	<title>家賃シミュレーター</title>
 
 	<script src="https://cdn.tailwindcss.com"></script>
@@ -244,21 +244,21 @@
 			radio.addEventListener("change", updateForm);
 		});
 
-document.querySelectorAll("input").forEach(el => {
-  el.addEventListener("change", () => {
-    el.blur();
-  });
+		document.querySelectorAll("input").forEach(el => {
+			el.addEventListener("change", () => {
+				el.blur();
+			});
 
-  el.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") el.blur();
-  });
-});
+			el.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") el.blur();
+			});
+		});
 
-document.addEventListener("pointerdown", (e) => {
-  if (!e.target.closest("input")) {
-    document.activeElement?.blur();
-  }
-});
+		document.addEventListener("pointerdown", (e) => {
+			if (!e.target.closest("input")) {
+				document.activeElement?.blur();
+			}
+		});
 	</script>
 
 </body>

@@ -135,9 +135,7 @@
 
         if (!a || isNaN(n) || isNaN(m)) {
           output.innerHTML = `
-          <div class="text-red-500 text-center font-bold">
-            入力を確認してください
-          </div>
+          <div class="text-red-500 text-center font-bold">入力を確認してください</div>
         `;
           output.classList.remove("hidden");
           return;
@@ -145,9 +143,7 @@
 
         if (a === 0 || n >= m) {
           output.innerHTML = `
-          <div class="text-red-500 text-center font-bold">
-            値が不正です
-          </div>
+          <div class="text-red-500 text-center font-bold">値が不正です</div>
         `;
           output.classList.remove("hidden");
           return;

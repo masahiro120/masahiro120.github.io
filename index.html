@@ -31,24 +31,72 @@
       </div>
     </div>
 
+    <div class="text-center">
+      <button id="toggle-btn"
+        onclick="toggleHobby()"
+        class="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800">
+        趣味系を表示
+      </button>
+    </div>
+
     <!-- 趣味系 -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
+    <div id="hobby-section"
+        class="bg-white rounded-2xl shadow-lg p-6 hidden">
+
       <h2 class="text-2xl font-semibold mb-4 text-gray-700">趣味系</h2>
 
       <div class="space-y-3">
         <a href="hobby/quadratic_function/quadratic.html"
-           class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+          class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
           二次関数 最大最小値計算
         </a>
 
         <a href="hobby/monster/fusion_tree.html"
-           class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+          class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
           テリワンSP 配合図検索
         </a>
       </div>
+
     </div>
 
   </div>
 
+  <script>
+  function toggleHobby() {
+    const section = document.getElementById("hobby-section");
+    const btn = document.getElementById("toggle-btn");
+
+    const isHidden = section.classList.contains("hidden");
+
+    // ===== 表示する時 =====
+    if (isHidden) {
+
+      const password = prompt("パスワードを入力してください");
+
+      if (password === "1234") {
+        section.classList.remove("hidden");
+
+        btn.textContent = "🔓 趣味系を非表示";
+        btn.classList.remove("bg-gray-700");
+        btn.classList.add("bg-red-500", "hover:bg-red-600");
+      } else {
+        alert("パスワードが違います");
+      }
+
+    }
+
+    // ===== 非表示にする時 =====
+    else {
+      section.classList.add("hidden");
+
+      btn.textContent = "趣味系を表示";
+      btn.classList.remove("bg-red-500", "hover:bg-red-600");
+      btn.classList.add("bg-gray-700");
+
+      // 認証状態リセット（重要）
+      sessionStorage.removeItem("hobbyAuth");
+    }
+  }
+  </script>
 </body>
 </html>

@@ -54,6 +54,10 @@
 
   <script type="module">
     import {
+      formatNumber
+    } from "/module.js";
+
+    import {
       calcEmploymentIncomeDeduction,
       calcBasicDeduction,
       calcIncomeTax
@@ -88,22 +92,22 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">給与所得控除</div>
-          <div class="text-2xl font-bold text-blue-600">${employment.toFixed(2)} 万円</div>
+          <div class="text-2xl font-bold text-blue-600">${formatNumber(employment)} 万円</div>
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">基礎控除</div>
-          <div class="text-2xl font-bold text-blue-600">${basic.toFixed(2)} 万円</div>
+          <div class="text-2xl font-bold text-blue-600">${formatNumber(basic)} 万円</div>
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">課税所得</div>
-          <div class="text-2xl font-bold text-blue-600">${income.toFixed(2)} 万円</div>
+          <div class="text-2xl font-bold text-blue-600">${formatNumber(income)} 万円</div>
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow text-center">
           <div class="text-gray-500">所得税</div>
-          <div class="text-2xl font-bold text-green-600">${tax.toFixed(2)} 万円</div>
+          <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
         </div>
       </div>
     `;

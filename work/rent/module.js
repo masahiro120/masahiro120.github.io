@@ -1,5 +1,3 @@
-// module.js
-
 export function calcRentToIncome(rent, ratio, subsidy, tax) {
   const realCost = rent - subsidy + tax;
   return {

@@ -78,6 +78,10 @@
 
 	<script type="module">
 		import {
+			formatNumber
+		} from "/module.js";
+
+		import {
 			calcRentToIncome,
 			calcIncomeToRent,
 			calcIncomeToRatio
@@ -135,14 +139,14 @@
 					        <div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">実質負担額</div>
 								<div class="text-2xl font-bold text-blue-600">
-									${result.realCost.toFixed(2)} 万円
+									${formatNumber(result.realCost)} 万円
 								</div>
 							</div>
 
 							<div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">必要手取り</div>
 								<div class="text-2xl font-bold text-green-600">
-									${result.needIncome.toFixed(2)} 万円
+									${formatNumber(result.needIncome)} 万円
 								</div>
 							</div>
 						</div>
@@ -156,14 +160,14 @@
 							<div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">実質負担額</div>
 								<div class="text-2xl font-bold text-blue-600">
-									${result.realCost.toFixed(2)} 万円
+									${formatNumber(result.realCost)} 万円
 								</div>
 							</div>
 
 							<div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">家賃目安</div>
 								<div class="text-2xl font-bold text-green-600">
-									${result.rent.toFixed(2)} 万円
+									${formatNumber(result.rent)} 万円
 								</div>
 							</div>
 						</div>
@@ -177,14 +181,14 @@
 							<div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">実質負担額</div>
 								<div class="text-2xl font-bold text-blue-600">
-									${result.realCost.toFixed(2)} 万円
+									${formatNumber(result.realCost)} 万円
 								</div>
 							</div>
 
 							<div class="bg-white p-4 rounded-lg shadow text-center">
 								<div class="text-gray-500">割合</div>
 								<div class="text-2xl font-bold text-green-600">
-									${(result.ratio * 100).toFixed(1)} %
+									${formatNumber(result.ratio * 100)} %
 								</div>
 							</div>
 						</div>

@@ -1,5 +1,3 @@
-// module.js
-
 export function calcEmploymentIncomeDeduction(income) {
   if (income < 162.5) return 55;
   if (income < 180) return income * 0.4 - 10;

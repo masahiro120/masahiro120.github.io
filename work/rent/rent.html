@@ -32,22 +32,32 @@
 </div>
 
 <!-- 入力 -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="space-y-4">
 
-  <input id="rent" type="number" placeholder="家賃"
-    class="p-3 border rounded-lg">
+  <div id="rent-group">
+    <label class="block text-sm">家賃（万円）</label>
+    <input id="rent" type="number" class="w-full p-3 border rounded-lg">
+  </div>
 
-  <input id="income" type="number" placeholder="手取り"
-    class="p-3 border rounded-lg">
+  <div id="income-group">
+    <label class="block text-sm">手取り（万円）</label>
+    <input id="income" type="number" class="w-full p-3 border rounded-lg">
+  </div>
 
-  <input id="ratio" type="number" placeholder="割合（例: 0.3）"
-    class="p-3 border rounded-lg">
+  <div id="ratio-group">
+    <label class="block text-sm">割合（例: 0.3）</label>
+    <input id="ratio" type="number" class="w-full p-3 border rounded-lg">
+  </div>
 
-  <input id="subsidy" type="number" placeholder="家賃補助"
-    class="p-3 border rounded-lg">
+  <div id="subsidy-group">
+    <label class="block text-sm">家賃補助（万円）</label>
+    <input id="subsidy" type="number" class="w-full p-3 border rounded-lg">
+  </div>
 
-  <input id="tax" type="number" placeholder="補助の税金"
-    class="p-3 border rounded-lg">
+  <div id="tax-group">
+    <label class="block text-sm">補助の税金（万円）</label>
+    <input id="tax" type="number" class="w-full p-3 border rounded-lg">
+  </div>
 
 </div>
 
@@ -129,6 +139,50 @@ function calc() {
 
   output.innerText = result;
 }
+
+const groups = {
+  rent: document.getElementById("rent-group"),
+  income: document.getElementById("income-group"),
+  ratio: document.getElementById("ratio-group"),
+  subsidy: document.getElementById("subsidy-group"),
+  tax: document.getElementById("tax-group"),
+};
+
+function updateForm() {
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+
+  // 全部非表示にする
+  Object.values(groups).forEach(el => el.classList.add("hidden"));
+
+  if (mode === "rent_to_income") {
+    groups.rent.classList.remove("hidden");
+    groups.ratio.classList.remove("hidden");
+    groups.subsidy.classList.remove("hidden");
+    groups.tax.classList.remove("hidden");
+  }
+
+  else if (mode === "income_to_rent") {
+    groups.income.classList.remove("hidden");
+    groups.ratio.classList.remove("hidden");
+    groups.subsidy.classList.remove("hidden");
+    groups.tax.classList.remove("hidden");
+  }
+
+  else {
+    groups.income.classList.remove("hidden");
+    groups.rent.classList.remove("hidden");
+    groups.subsidy.classList.remove("hidden");
+    groups.tax.classList.remove("hidden");
+  }
+}
+
+// 初期表示
+updateForm();
+
+// ラジオ変更時
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+  radio.addEventListener("change", updateForm);
+});
 </script>
 
 </body>

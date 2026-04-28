@@ -57,10 +57,8 @@ def calculation(income):
     income -= basic_deduction
     print(f"課税所得　　: {income}万円")
     income_tax = calc_income_tax(income)
-    # print(f"所得税　　　: {income_tax}万円")
     print(f"所得税　　　: {income_tax:.2f}万円")
 
 if __name__ == "__main__":
     print("=== 年収から所得税を計算 ===")
-    # print(f"年収　　　　: {input_income}万円")
     calculation(input_income)

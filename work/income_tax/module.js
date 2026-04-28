@@ -1,6 +1,5 @@
 export function calcEmploymentIncomeDeduction(income) {
-  if (income < 162.5) return 55;
-  if (income < 180) return income * 0.4 - 10;
+  if (income < 190) return 65;
   if (income < 360) return income * 0.3 + 8;
   if (income < 660) return income * 0.2 + 44;
   if (income < 850) return income * 0.1 + 110;
@@ -13,6 +12,9 @@ export function calcBasicDeduction(income) {
   if (income <= 489) return 68;
   if (income <= 655) return 63;
   if (income <= 2350) return 58;
+  if (income <= 2400) return 48;
+  if (income <= 2450) return 32;
+  if (income <= 2500) return 16;
   return 0;
 }
 

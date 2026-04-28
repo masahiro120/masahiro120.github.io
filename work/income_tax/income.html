@@ -81,10 +81,10 @@
       let income = input_income;
 
       const employment = calcEmploymentIncomeDeduction(income);
-      income -= employment;
+      income = Math.max(0, income - employment);
 
       const basic = calcBasicDeduction(income);
-      income -= basic;
+      income = Math.max(0, income - basic);
 
       const tax = calcIncomeTax(income);
 

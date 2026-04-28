@@ -158,37 +158,49 @@
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">健康保険料</div>
             <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.health)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(insurance.health / 12)} 万円/月</div>
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">厚生年金</div>
             <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.pension)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(insurance.pension / 12)} 万円/月</div>
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">雇用保険料</div>
             <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.employment)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(insurance.employment / 12)} 万円/月</div>
           </div>
         </div>
       `;
 
       output3.innerHTML = `
         <h2 class="text-2xl font-bold mb-3 text-center text-gray-500">税金</h2>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">所得税</div>
+
             <div class="text-2xl font-bold text-green-600">${formatNumber(tax)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(tax / 12)} 万円/月</div>
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">住民税</div>
+
             <div class="text-2xl font-bold text-green-600">${formatNumber(resident)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(resident / 12)} 万円/月</div>
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow text-center">
             <div class="text-gray-500">社会保険料</div>
+
             <div class="text-2xl font-bold text-green-600">${formatNumber(insurance.total)} 万円</div>
+            <div class="text-sm text-gray-400 mt-1">${formatNumber(insurance.total / 12)} 万円/月</div>
           </div>
+
         </div>
       `;
     };

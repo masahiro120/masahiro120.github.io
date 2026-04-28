@@ -61,41 +61,89 @@
 
   </div>
 
+  <div id="password-modal"
+     class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+
+    <div class="bg-white rounded-xl p-6 w-80 shadow-lg text-center">
+
+      <h2 class="text-lg font-bold mb-4">パスワード入力</h2>
+
+      <input type="password" id="password-input"
+            class="w-full p-2 border rounded mb-4"
+            placeholder="パスワード">
+
+      <div class="flex gap-2">
+        <button onclick="submitPassword()"
+          class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+          OK
+        </button>
+
+        <button onclick="closeModal()"
+          class="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400">
+          キャンセル
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <script>
+  let pendingAction = null;
+
   function toggleHobby() {
+    const section = document.getElementById("hobby-section");
+
+    if (section.classList.contains("hidden")) {
+      openModal("show");
+    } else {
+      hideHobby();
+    }
+  }
+
+  function openModal(action) {
+    pendingAction = action;
+    document.getElementById("password-modal").classList.remove("hidden");
+    document.getElementById("password-modal").classList.add("flex");
+    document.getElementById("password-input").value = "";
+  }
+
+  function closeModal() {
+    document.getElementById("password-modal").classList.add("hidden");
+  }
+
+  function submitPassword() {
+    const input = document.getElementById("password-input").value;
+
+    if (input === "1234") {
+      if (pendingAction === "show") {
+        showHobby();
+      }
+      closeModal();
+    } else {
+      alert("パスワードが違います");
+    }
+  }
+
+  function showHobby() {
     const section = document.getElementById("hobby-section");
     const btn = document.getElementById("toggle-btn");
 
-    const isHidden = section.classList.contains("hidden");
+    section.classList.remove("hidden");
 
-    // ===== 表示する時 =====
-    if (isHidden) {
+    btn.textContent = "🔓 趣味系を非表示";
+    btn.classList.remove("bg-gray-700");
+    btn.classList.add("bg-red-500", "hover:bg-red-600");
+  }
 
-      const password = prompt("パスワードを入力してください");
+  function hideHobby() {
+    const section = document.getElementById("hobby-section");
+    const btn = document.getElementById("toggle-btn");
 
-      if (password === "1234") {
-        section.classList.remove("hidden");
+    section.classList.add("hidden");
 
-        btn.textContent = "🔓 趣味系を非表示";
-        btn.classList.remove("bg-gray-700");
-        btn.classList.add("bg-red-500", "hover:bg-red-600");
-      } else {
-        alert("パスワードが違います");
-      }
-
-    }
-
-    // ===== 非表示にする時 =====
-    else {
-      section.classList.add("hidden");
-
-      btn.textContent = "趣味系を表示";
-      btn.classList.remove("bg-red-500", "hover:bg-red-600");
-      btn.classList.add("bg-gray-700");
-
-      // 認証状態リセット（重要）
-      sessionStorage.removeItem("hobbyAuth");
-    }
+    btn.textContent = "🔒 趣味系を表示";
+    btn.classList.remove("bg-red-500", "hover:bg-red-600");
+    btn.classList.add("bg-gray-700");
   }
   </script>
 </body>

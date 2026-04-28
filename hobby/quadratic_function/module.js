@@ -1,4 +1,8 @@
 export function toFraction(num) {
+
+  // 👇 追加（これが重要）
+  if (!isFinite(num)) return "∞";
+
   if (Number.isInteger(num)) return num.toString();
 
   const tolerance = 1e-10;
@@ -6,8 +10,10 @@ export function toFraction(num) {
   let k1 = 0, k2 = 1;
   let b = num;
 
-  do {
+  // 👇 修正（numではなく絶対値）
+  while (Math.abs(num - h1 / k1) > tolerance) {
     let a = Math.floor(b);
+
     let aux = h1;
     h1 = a * h1 + h2;
     h2 = aux;
@@ -17,9 +23,11 @@ export function toFraction(num) {
     k2 = aux;
 
     b = 1 / (b - a);
-  } while (Math.abs(num - h1 / k1) > num * tolerance);
 
-  // 分母が1なら整数
+    // 👇 無限ループ防止
+    if (!isFinite(b)) break;
+  }
+
   if (k1 === 1) return h1.toString();
 
   return `${h1}/${k1}`;
@@ -162,6 +170,9 @@ export function drawGraph(a, p, q, min, max, maxPoints, minPoints) {
 
   const canvas = document.getElementById("graph");
   canvas.classList.remove("hidden");
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.width * 0.75; // 比率固定（4:3）
   const ctx = canvas.getContext("2d");
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);

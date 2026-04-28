@@ -1,4 +1,4 @@
-// tax.js
+// module.js
 
 export function calcEmploymentIncomeDeduction(income) {
   if (income < 162.5) return 55;

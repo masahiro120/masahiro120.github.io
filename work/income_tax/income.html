@@ -70,17 +70,30 @@
     }
 
     async function main() {
-      const output = document.getElementById("output");
-      output.innerText = "";
-      output.classList.add("hidden");
-
       while (!pyodide) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       let result = "";
 
-      let input_income = parseFloat(document.getElementById("input_income").value);
+      let input_income = document.getElementById("input_income").value;
+
+      const output = document.getElementById("output");
+      output.classList.remove("hidden");
+
+      // 入力チェック
+      function isInvalid(v) {
+        return v === "" || isNaN(Number(v));
+      }
+
+      if (isInvalid(input_income)) {
+        output.innerHTML = `
+          <div class="text-red-500 text-center font-bold">
+            入力を確認してください
+          </div>
+        `;
+        return;
+      }
 
       try {
         const res = await fetch("py_program.py");

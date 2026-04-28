@@ -74,7 +74,7 @@ export function fmt(num) {
 
 export function formatPoints(points) {
   return points
-    .map(p => `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})`)
+    .map(p => `(${toFraction(p.x)}, ${toFraction(p.y)})`)
     .join("<br>");
 }
 

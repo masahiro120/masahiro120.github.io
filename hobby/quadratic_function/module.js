@@ -187,10 +187,18 @@ export function drawGraph(a, p, q, min, max, maxPoints, minPoints) {
 
   let xs = [];
   const steps = 500;
-  for (let i = 0; i <= steps; i++) {
+
+  // 始点
+  xs.push({ x: min, y: f(min) });
+
+  // 中間
+  for (let i = 1; i < steps; i++) {
     let x = min + (max - min) * (i / steps);
     xs.push({ x, y: f(x) });
   }
+
+  // 終点
+  xs.push({ x: max, y: f(max) });
 
   const yMinRaw = Math.min(...xs.map(v => v.y));
   const yMaxRaw = Math.max(...xs.map(v => v.y));

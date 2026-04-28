@@ -49,8 +49,12 @@
       </button>
 
       <!-- 出力 -->
-      <pre id="output"
-           class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap"></pre>
+      <!-- <pre id="output"
+           class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre-wrap">
+      </pre> -->
+      <div id="output"
+        class="hidden bg-gray-50 p-6 rounded-xl border space-y-4">
+      </div>
 
     </div>
   </div>
@@ -97,11 +101,38 @@
         result = "エラー: " + error;
       }
 
-      output.innerText = result;
+      // output.innerText = result;
 
-      if (result.trim() !== "") {
-        output.classList.remove("hidden");
-      }
+      // if (result.trim() !== "") {
+      //   output.classList.remove("hidden");
+      // }
+
+        if (result.trim() === "") return;
+
+  // 行ごとに分割
+  const lines = result.trim().split("\n");
+
+  let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+
+  lines.forEach(line => {
+    if (!line.includes(":")) return;
+
+    const [label, value] = line.split(":");
+
+    html += `
+      <div class="bg-white p-4 rounded-lg shadow text-center">
+        <div class="text-gray-500">${label}</div>
+        <div class="text-2xl font-bold text-blue-600">
+          ${value}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  output.innerHTML = html;
+  output.classList.remove("hidden");
     }
 
     loadPyodideAndPackages();

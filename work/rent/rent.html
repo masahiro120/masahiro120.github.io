@@ -87,16 +87,43 @@
 function calc() {
   const mode = document.querySelector('input[name="mode"]:checked').value;
 
-  let rent = parseFloat(document.getElementById("rent").value);
-  let income = parseFloat(document.getElementById("income").value);
-  let ratio = parseFloat(document.getElementById("ratio").value);
-  let subsidy = parseFloat(document.getElementById("subsidy").value || 0);
-  let tax = parseFloat(document.getElementById("tax").value || 0);
+  let rent = document.getElementById("rent").value;
+  let income = document.getElementById("income").value;
+  let ratio = document.getElementById("ratio").value;
+  let subsidy = document.getElementById("subsidy").value;
+  let tax = document.getElementById("tax").value;
 
   const output = document.getElementById("output");
   output.classList.remove("hidden");
 
   let html = "";
+
+  // =========================
+  // 入力チェック（ここ重要）
+  // =========================
+  function isInvalid(v) {
+    return v === "" || isNaN(Number(v));
+  }
+
+  if (
+    (mode === "rent_to_income" && (isInvalid(rent) || isInvalid(ratio))) ||
+    (mode === "income_to_rent" && (isInvalid(income) || isInvalid(ratio))) ||
+    (mode === "income_to_ratio" && (isInvalid(income) || isInvalid(rent)))
+  ) {
+    output.innerHTML = `
+      <div class="text-red-500 text-center font-bold">
+        入力を確認してください
+      </div>
+    `;
+    return;
+  }
+
+  // 数値化（ここで安全に変換）
+  rent = Number(rent);
+  income = Number(income);
+  ratio = Number(ratio);
+  subsidy = Number(subsidy || 0);
+  tax = Number(tax || 0);
 
   try {
 

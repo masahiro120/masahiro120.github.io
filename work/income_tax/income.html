@@ -91,7 +91,6 @@
       const employment = calcEmploymentIncomeDeduction(income);
       income = Math.max(0, income - employment);
 
-      // const basic = calcBasicDeduction(income);
       const basic = document.querySelector('input[name="mode"]:checked').value === "before2027"
         ? calcBasicDeduction(income)
         : calcBasicDeduction2027(income);

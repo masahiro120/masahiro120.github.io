@@ -36,27 +36,27 @@
 
   <div id="rent-group">
     <label class="block text-sm">家賃（万円）</label>
-    <input id="rent" type="number" class="w-full p-3 border rounded-lg">
+    <input id="rent" type="number" class="w-full p-3 border rounded-lg" value="11">
   </div>
 
   <div id="income-group">
     <label class="block text-sm">手取り（万円）</label>
-    <input id="income" type="number" class="w-full p-3 border rounded-lg">
+    <input id="income" type="number" class="w-full p-3 border rounded-lg" value="26">
   </div>
 
   <div id="ratio-group">
     <label class="block text-sm">割合（例: 0.3）</label>
-    <input id="ratio" type="number" class="w-full p-3 border rounded-lg">
+    <input id="ratio" type="number" class="w-full p-3 border rounded-lg" value="0.3">
   </div>
 
   <div id="subsidy-group">
     <label class="block text-sm">家賃補助（万円）</label>
-    <input id="subsidy" type="number" class="w-full p-3 border rounded-lg">
+    <input id="subsidy" type="number" class="w-full p-3 border rounded-lg" value="4.5">
   </div>
 
   <div id="tax-group">
     <label class="block text-sm">補助の税金（万円）</label>
-    <input id="tax" type="number" class="w-full p-3 border rounded-lg">
+    <input id="tax" type="number" class="w-full p-3 border rounded-lg" value="1">
   </div>
 
 </div>
@@ -68,8 +68,13 @@
 </button>
 
 <!-- 出力 -->
-<pre id="output"
-  class="hidden bg-gray-100 p-4 rounded-lg border whitespace-pre-wrap"></pre>
+<!-- <pre id="output"
+  class="hidden bg-gray-100 p-4 rounded-lg border whitespace-pre-wrap">
+</pre> -->
+
+<div id="output"
+  class="hidden bg-gray-50 p-6 rounded-xl border space-y-4">
+</div>
 
 </div>
 </div>
@@ -87,59 +92,84 @@ function calc() {
   const output = document.getElementById("output");
   output.classList.remove("hidden");
 
-  let result = "";
-
-  // 共通
-  let realCost;
+  let html = "";
 
   try {
 
+    let realCost, needIncome, rentCalc, ratioCalc;
+
     if (mode === "rent_to_income") {
 
-      if (isNaN(rent) || isNaN(ratio)) throw "入力不足";
-
       realCost = rent - subsidy + tax;
-      let needIncome = realCost / ratio;
+      needIncome = realCost / ratio;
 
-      result =
-        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
-        "必要手取り: " + needIncome.toFixed(2) + " 万円";
+      html = `
+        <div class="text-center">
+          <div class="text-gray-500">実質負担額</div>
+          <div class="text-2xl font-bold text-blue-600">
+            ${realCost.toFixed(2)} 万円
+          </div>
+        </div>
 
+        <div class="text-center">
+          <div class="text-gray-500">必要手取り</div>
+          <div class="text-2xl font-bold text-green-600">
+            ${needIncome.toFixed(2)} 万円
+          </div>
+        </div>
+      `;
     }
 
     else if (mode === "income_to_rent") {
 
-      if (isNaN(income) || isNaN(ratio)) throw "入力不足";
-
       realCost = income * ratio;
-      let rentCalc = realCost + subsidy - tax;
+      rentCalc = realCost + subsidy - tax;
 
-      result =
-        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
-        "家賃目安: " + rentCalc.toFixed(2) + " 万円";
+      html = `
+        <div class="text-center">
+          <div class="text-gray-500">実質負担額</div>
+          <div class="text-2xl font-bold text-blue-600">
+            ${realCost.toFixed(2)} 万円
+          </div>
+        </div>
 
+        <div class="text-center">
+          <div class="text-gray-500">家賃目安</div>
+          <div class="text-2xl font-bold text-green-600">
+            ${rentCalc.toFixed(2)} 万円
+          </div>
+        </div>
+      `;
     }
 
     else {
 
-      if (isNaN(income) || isNaN(rent)) throw "入力不足";
-
       realCost = rent - subsidy + tax;
-      let ratioCalc = realCost / income;
+      ratioCalc = realCost / income;
 
-      result =
-        "実質負担額: " + realCost.toFixed(2) + " 万円\n" +
-        "割合: " + (ratioCalc * 100).toFixed(1) + " %";
+      html = `
+        <div class="text-center">
+          <div class="text-gray-500">実質負担額</div>
+          <div class="text-2xl font-bold text-blue-600">
+            ${realCost.toFixed(2)} 万円
+          </div>
+        </div>
 
+        <div class="text-center">
+          <div class="text-gray-500">割合</div>
+          <div class="text-2xl font-bold text-green-600">
+            ${(ratioCalc * 100).toFixed(1)} %
+          </div>
+        </div>
+      `;
     }
 
   } catch (e) {
-    result = "入力を確認してください";
+    html = `<div class="text-red-500 text-center">入力を確認してください</div>`;
   }
 
-  output.innerText = result;
+  output.innerHTML = html;
 }
-
 const groups = {
   rent: document.getElementById("rent-group"),
   income: document.getElementById("income-group"),

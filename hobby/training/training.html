@@ -8,9 +8,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
-  <div class="max-w-4xl mx-auto space-y-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center mb-6">
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+        筋トレカロリー計算
+      </h1>
+
+      <a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+        ← 戻る
+      </a>
+    </div>
+
+    <div class="space-y-6">
     <div class="bg-white p-6 rounded-2xl shadow">
-      <h1 class="text-2xl font-bold text-gray-800 mb-4">筋トレカロリー計算</h1>
+      <!-- <h1 class="text-2xl font-bold text-gray-800 mb-4">筋トレカロリー計算</h1> -->
 
       <label class="block text-lg font-semibold mb-2 text-gray-700">体重（kg）</label>
       <input id="weight" type="number" class="w-full p-3 border rounded-lg" placeholder="例: 65" />

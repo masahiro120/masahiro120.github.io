@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>筋トレカロリー計算</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h1 class="text-2xl font-bold text-gray-800 mb-4">筋トレカロリー計算</h1>
+
+      <label class="block text-lg font-semibold mb-2 text-gray-700">体重（kg）</label>
+      <input id="weight" type="number" class="w-full p-3 border rounded-lg" placeholder="例: 65" />
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow space-y-4">
+      <h2 class="text-xl font-bold text-gray-800">メニュー登録</h2>
+      <div class="grid md:grid-cols-3 gap-3">
+        <input id="menu-name" type="text" placeholder="メニュー名" class="p-3 border rounded-lg" />
+        <input id="menu-mets" type="number" step="0.1" placeholder="メッツ" class="p-3 border rounded-lg" />
+        <button onclick="addMenu()" class="bg-green-500 text-white rounded-lg hover:bg-green-600">追加</button>
+      </div>
+      <div id="menu-list" class="space-y-2"></div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow space-y-4">
+      <h2 class="text-xl font-bold text-gray-800">カロリー計算</h2>
+      <div id="exercise-list" class="space-y-3"></div>
+      <button onclick="addExerciseRow()" class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600">メニュー追加</button>
+      <button onclick="calculateCalories()" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600">計算</button>
+      <div id="output" class="hidden bg-gray-50 p-4 rounded-xl border"></div>
+    </div>
+  </div>
+
+  <script>
+    let SQL;
+    let db;
+
+    async function setup() {
+      SQL = await initSqlJs({
+        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+      });
+
+      initDB();
+
+      const savedWeight = localStorage.getItem('workout-weight');
+      if (savedWeight) document.getElementById('weight').value = savedWeight;
+
+      document.getElementById('weight').addEventListener('input', e => {
+        localStorage.setItem('workout-weight', e.target.value);
+      });
+
+      renderMenus();
+      addExerciseRow();
+    }
+
+    function initDB() {
+      db = new SQL.Database();
+      db.run('CREATE TABLE menus (id INTEGER, name TEXT, mets REAL);');
+
+      const saved = localStorage.getItem('workout-menus');
+      if (saved) {
+        JSON.parse(saved).forEach(row => {
+          db.run('INSERT INTO menus VALUES (?, ?, ?)', row);
+        });
+      } else {
+        const defaults = [
+          [1, '腕立て伏せ', 3.8],
+          [2, 'スクワット', 5.0],
+          [3, 'ランニング', 8.3]
+        ];
+        defaults.forEach(row => db.run('INSERT INTO menus VALUES (?, ?, ?)', row));
+        saveMenus();
+      }
+    }
+
+    function saveMenus() {
+      const result = db.exec('SELECT * FROM menus');
+      const rows = result.length ? result[0].values : [];
+      localStorage.setItem('workout-menus', JSON.stringify(rows));
+    }
+
+    window.addMenu = function () {
+      const name = document.getElementById('menu-name').value.trim();
+      const mets = Number(document.getElementById('menu-mets').value);
+      if (!name || !mets) return;
+
+      const result = db.exec('SELECT MAX(id) FROM menus');
+      const nextId = (result[0].values[0][0] || 0) + 1;
+
+      db.run('INSERT INTO menus VALUES (?, ?, ?)', [nextId, name, mets]);
+      saveMenus();
+
+      document.getElementById('menu-name').value = '';
+      document.getElementById('menu-mets').value = '';
+
+      renderMenus();
+      renderExerciseRows();
+    }
+
+    window.deleteMenu = function (id) {
+      db.run('DELETE FROM menus WHERE id = ?', [id]);
+      saveMenus();
+      renderMenus();
+      renderExerciseRows();
+    }
+
+    function getMenus() {
+      const result = db.exec('SELECT * FROM menus ORDER BY id');
+      return result.length ? result[0].values : [];
+    }
+
+    function renderMenus() {
+      const container = document.getElementById('menu-list');
+      const menus = getMenus();
+
+      container.innerHTML = menus.map(row => `
+        <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+          <div>
+            <div class="font-semibold">${row[1]}</div>
+            <div class="text-sm text-gray-500">METs: ${row[2]}</div>
+          </div>
+          <button onclick="deleteMenu(${row[0]})" class="bg-red-500 text-white px-3 py-1 rounded-lg">削除</button>
+        </div>
+      `).join('');
+    }
+
+    let exerciseRows = 0;
+
+    window.addExerciseRow = function () {
+      exerciseRows++;
+      renderExerciseRows();
+    }
+
+    window.removeExerciseRow = function (index) {
+      const container = document.getElementById('exercise-list');
+      const rows = Array.from(container.querySelectorAll('.grid')).map(row => ({
+        menuId: row.querySelector('.exercise-menu')?.value || '',
+        minutes: row.querySelector('.exercise-time')?.value || ''
+      }));
+
+      rows.splice(index, 1);
+      exerciseRows = rows.length;
+
+      container.innerHTML = '';
+
+      let html = '';
+      const menus = getMenus();
+      rows.forEach(saved => {
+        html += `
+          <div class="grid md:grid-cols-3 gap-3">
+            <select class="exercise-menu p-3 border rounded-lg">
+              ${menus.map(menu => `
+                <option value="${menu[0]}" ${String(saved.menuId) === String(menu[0]) ? 'selected' : ''}>
+                  ${menu[1]} (METs ${menu[2]})
+                </option>
+              `).join('')}
+            </select>
+            <input
+              type="number"
+              class="exercise-time p-3 border rounded-lg"
+              placeholder="時間（分）"
+              value="${saved.minutes || ''}"
+            />
+            <button onclick="removeExerciseRow(${rows.indexOf(saved)})" class="bg-red-500 text-white rounded-lg hover:bg-red-600">
+              削除
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderExerciseRows() {
+      const container = document.getElementById('exercise-list');
+      const menus = getMenus();
+
+      const previousValues = Array.from(container.querySelectorAll('.grid')).map(row => ({
+        menuId: row.querySelector('.exercise-menu')?.value || '',
+        minutes: row.querySelector('.exercise-time')?.value || ''
+      }));
+
+      let html = '';
+      for (let i = 0; i < exerciseRows; i++) {
+        const saved = previousValues[i] || {};
+
+        html += `
+          <div class="grid md:grid-cols-3 gap-3">
+            <select class="exercise-menu p-3 border rounded-lg">
+              ${menus.map(menu => `
+                <option value="${menu[0]}" ${String(saved.menuId) === String(menu[0]) ? 'selected' : ''}>
+                  ${menu[1]} (METs ${menu[2]})
+                </option>
+              `).join('')}
+            </select>
+            <input
+              type="number"
+              class="exercise-time p-3 border rounded-lg"
+              placeholder="時間（分）"
+              value="${saved.minutes || ''}"
+            />
+            <button onclick="removeExerciseRow(${i})" class="bg-red-500 text-white rounded-lg hover:bg-red-600">
+              削除
+            </button>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    window.calculateCalories = function () {
+      const weight = Number(document.getElementById('weight').value);
+      const menuEls = document.querySelectorAll('.exercise-menu');
+      const timeEls = document.querySelectorAll('.exercise-time');
+      const output = document.getElementById('output');
+
+      if (!weight) return;
+
+      let total = 0;
+      let html = '<div class="space-y-3">';
+
+      menuEls.forEach((menuEl, i) => {
+        const menuId = Number(menuEl.value);
+        const minutes = Number(timeEls[i].value);
+        if (!minutes) return;
+
+        const result = db.exec(`SELECT name, mets FROM menus WHERE id = ${menuId}`);
+        const name = result[0].values[0][0];
+        const mets = result[0].values[0][1];
+
+        const calories = mets * weight * (minutes / 60) * 1.05;
+        total += calories;
+
+        html += `
+          <div class="bg-white p-4 rounded-lg shadow flex justify-between">
+            <div>
+              <div class="font-semibold">${name}</div>
+              <div class="text-sm text-gray-500">${minutes}分 / METs ${mets}</div>
+            </div>
+            <div class="text-lg font-bold text-blue-600">${calories.toFixed(1)} kcal</div>
+          </div>
+        `;
+      });
+
+      html += `
+        <div class="bg-blue-50 p-4 rounded-lg border text-center">
+          <div class="text-gray-500">総消費カロリー</div>
+          <div class="text-2xl font-bold text-blue-700">${total.toFixed(1)} kcal</div>
+        </div>
+      `;
+
+      html += '</div>';
+
+      output.classList.remove('hidden');
+      output.innerHTML = html;
+    }
+
+    setup();
+  </script>
+</body>
+</html>

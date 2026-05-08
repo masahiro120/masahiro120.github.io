@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <title>SQLデモ</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+
+  <div class="max-w-3xl mx-auto">
+
+    <!-- ヘッダー -->
+    <div class="flex items-center mb-6">
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+        SQL デモ
+      </h1>
+
+      <a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
+        ← 戻る
+      </a>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow space-y-6">
+
+      <!-- SQL入力 -->
+      <div>
+        <label class="block text-lg font-semibold mb-2 text-gray-700">SQL</label>
+        <textarea id="sql" rows="5"
+          class="w-full p-3 border rounded-lg font-mono text-sm">SELECT * FROM rooms;</textarea>
+      </div>
+
+      <!-- ボタン -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <button onclick="initDB()" class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600">
+          サンプルDB作成
+        </button>
+
+        <button onclick="runSQL()" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600">
+          SQL実行
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input id="room-name" type="text" placeholder="物件名" class="p-3 border rounded-lg">
+
+        <input id="room-rent" type="number" placeholder="家賃" class="p-3 border rounded-lg">
+
+        <button onclick="addRoom()" class="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600">
+          追加
+        </button>
+      </div>
+
+      <!-- 出力 -->
+      <div id="output" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
+    </div>
+  </div>
+
+  <script>
+    let db;
+    let SQL;
+
+    async function setup() {
+      SQL = await initSqlJs({
+        locateFile: file =>
+          `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+      });
+
+      loadDB();
+    }
+
+    function createFreshDB() {
+      db = new SQL.Database();
+
+      db.run(`
+		CREATE TABLE rooms (
+			id INTEGER,
+			name TEXT,
+			rent INTEGER
+		);
+	`);
+
+      db.run(`
+		INSERT INTO rooms VALUES (1, '大阪駅 徒歩5分', 82000);
+		INSERT INTO rooms VALUES (2, '梅田 1K', 76000);
+		INSERT INTO rooms VALUES (3, 'なんば 1LDK', 115000);
+		INSERT INTO rooms VALUES (4, '天王寺 ワンルーム', 68000);
+	`);
+
+      saveDB();
+    }
+
+    function saveDB() {
+      const result = db.exec("SELECT * FROM rooms");
+      const rows = result.length ? result[0].values : [];
+
+      localStorage.setItem("rooms-data", JSON.stringify(rows));
+    }
+
+    function loadDB() {
+      const saved = localStorage.getItem("rooms-data");
+
+      db = new SQL.Database();
+
+      db.run(`
+        CREATE TABLE rooms (
+          id INTEGER,
+          name TEXT,
+          rent INTEGER
+        );
+      `);
+
+      if (!saved) {
+        createFreshDB();
+        return;
+      }
+
+      const rows = JSON.parse(saved);
+
+      rows.forEach(row => {
+        db.run(
+          "INSERT INTO rooms VALUES (?, ?, ?)",
+          row
+        );
+      });
+    }
+
+    window.initDB = function () {
+      localStorage.removeItem("rooms-data");
+      createFreshDB();
+
+      const output = document.getElementById("output");
+      output.classList.remove("hidden");
+      output.innerHTML = `
+        <div class="text-green-600 font-semibold text-center">
+          サンプルデータベースを再作成しました
+        </div>
+      `;
+    };
+
+    window.addRoom = function () {
+      const name = document.getElementById("room-name").value.trim();
+      const rent = Number(document.getElementById("room-rent").value);
+
+      if (!name || !rent) return;
+
+      const result = db.exec("SELECT MAX(id) FROM rooms");
+      const maxId = result[0].values[0][0] || 0;
+      const nextId = maxId + 1;
+
+      db.run(
+        "INSERT INTO rooms VALUES (?, ?, ?)",
+        [nextId, name, rent]
+      );
+
+      saveDB();
+
+      document.getElementById("room-name").value = "";
+      document.getElementById("room-rent").value = "";
+
+      runSQL();
+    };
+
+    window.runSQL = function () {
+      const output = document.getElementById("output");
+      output.classList.remove("hidden");
+
+      const sql = document.getElementById("sql").value.trim();
+
+      try {
+        const result = db.exec(sql);
+
+        if (!result.length) {
+          output.innerHTML = `
+						<div class="text-blue-600 font-semibold text-center">
+							SQLを実行しました（結果なし）
+						</div>
+					`;
+          return;
+        }
+
+        const columns = result[0].columns;
+        const values = result[0].values;
+
+        let html = `
+					<div class="grid grid-cols-1 gap-4">
+				`;
+
+        values.forEach(row => {
+          html += `
+						<div class="bg-white p-4 rounded-lg shadow">
+					`;
+
+          columns.forEach((col, i) => {
+            html += `
+							<div class="flex justify-between border-b py-1 text-sm">
+								<span class="text-gray-500">${col}</span>
+								<span class="font-semibold">${row[i]}</span>
+							</div>
+						`;
+          });
+
+          html += `</div>`;
+        });
+
+        html += `</div>`;
+
+        output.innerHTML = html;
+
+      } catch (e) {
+        output.innerHTML = `
+					<div class="text-red-500 text-center font-bold">
+						SQLエラー: ${e.message}
+					</div>
+				`;
+      }
+    };
+
+    setup();
+  </script>
+
+</body>
+
+</html>

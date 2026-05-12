@@ -1,101 +1,134 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="night">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="/icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icon.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>My Tools</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
-<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-10">
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
 
-  <h1 class="text-4xl font-bold text-center mb-10 text-gray-800">
-    My Tools
-  </h1>
+  <div class="max-w-5xl mx-auto p-6">
 
-  <div class="max-w-4xl mx-auto space-y-10">
+    <!-- Header -->
+    <div class="text-center mb-10">
+      <h1 class="text-5xl font-black tracking-tight mb-3">
+        My Tools
+      </h1>
+
+      <p class="text-slate-400">
+        Personal Dashboard
+      </p>
+    </div>
 
     <!-- Work -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Work</h2>
+    <div class="card bg-white/10 backdrop-blur-xl border border-white/10 shadow-2xl mb-8">
 
-      <div class="space-y-3">
-        <div class="text-center">
+      <div class="card-body">
+
+        <h2 class="card-title text-2xl mb-4">
+          <i class="fa-solid fa-briefcase"></i>
+          Work
+        </h2>
+
+        <div class="grid md:grid-cols-2 gap-4">
+
           <a href="work/income_tax/income.html"
-            class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+            class="btn btn-primary btn-lg hover:scale-[1.02] transition-all duration-300">
+            <i class="fa-solid fa-yen-sign"></i>
             税金
           </a>
-        </div>
-        <div class="text-center">
+
           <a href="work/rent/rent.html"
-            class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
+            class="btn btn-primary btn-lg hover:scale-[1.02] transition-all duration-300">
+            <i class="fa-solid fa-house"></i>
             家賃
           </a>
-        </div>
-        <div class="text-center">
-          <a href="hobby/training/training.html"
-            class="block bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition">
-            データベース
-          </a>
+
         </div>
       </div>
     </div>
 
-    <div class="text-center">
-      <button id="toggle-btn" onclick="toggleHobby()"
-        class="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800">
+    <!-- Toggle -->
+    <div class="text-center mb-8">
+
+      <button id="toggle-btn"
+        onclick="toggleHobby()"
+        class="btn btn-secondary btn-wide">
         Hobbyを表示
       </button>
+
     </div>
 
     <!-- Hobby -->
-    <div id="hobby-section" class="bg-white rounded-2xl shadow-lg p-6 hidden">
+    <div id="hobby-section"
+      class="card bg-white/10 backdrop-blur-xl border border-white/10 shadow-2xl hidden">
 
-      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Hobby</h2>
+      <div class="card-body">
 
-      <div class="space-y-3">
-        <div class="text-center">
+        <h2 class="card-title text-2xl mb-4">
+          <i class="fa-solid fa-gamepad"></i>
+          Hobby
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-4">
+
           <a href="hobby/quadratic_function/quadratic.html"
-            class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+            class="btn btn-accent btn-lg">
             二次関数
           </a>
-        </div>
 
-        <div class="text-center">
           <a href="hobby/monster/fusion_tree.html"
-            class="block bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition">
+            class="btn btn-accent btn-lg">
             ゲーム
           </a>
+
+          <a href="hobby/training/training.html"
+            class="btn btn-accent btn-lg">
+            カロリー
+          </a>
+
         </div>
       </div>
-
     </div>
-
   </div>
 
-  <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+  <!-- Modal -->
+  <dialog id="password-modal" class="modal">
 
-    <div class="bg-white rounded-xl p-6 w-80 shadow-lg text-center">
+    <div class="modal-box">
 
-      <h2 class="text-lg font-bold mb-4">Enter Password</h2>
+      <h3 class="font-bold text-lg mb-4">
+        Password Required
+      </h3>
 
-      <input type="password" id="password-input" class="w-full p-2 border rounded mb-4" placeholder="password">
+      <input type="password"
+        id="password-input"
+        placeholder="password"
+        class="input input-bordered w-full mb-4" />
 
-      <div class="flex gap-2">
-        <button onclick="submitPassword()" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+      <div class="modal-action">
+
+        <button onclick="submitPassword()" class="btn btn-primary">
           OK
         </button>
 
-        <button onclick="closeModal()" class="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400">
+        <button onclick="closeModal()" class="btn">
           Cancel
         </button>
-      </div>
 
+      </div>
     </div>
-  </div>
+  </dialog>
 
   <script>
     let pendingAction = null;
@@ -112,22 +145,18 @@
 
     function openModal(action) {
       pendingAction = action;
-      document.getElementById("password-modal").classList.remove("hidden");
-      document.getElementById("password-modal").classList.add("flex");
-      document.getElementById("password-input").value = "";
+      document.getElementById("password-modal").showModal();
     }
 
     function closeModal() {
-      document.getElementById("password-modal").classList.add("hidden");
+      document.getElementById("password-modal").close();
     }
 
     function submitPassword() {
       const input = document.getElementById("password-input").value;
 
       if (input === "password") {
-        if (pendingAction === "show") {
-          showHobby();
-        }
+        showHobby();
         closeModal();
       } else {
         alert("パスワードが違います");
@@ -141,8 +170,8 @@
       section.classList.remove("hidden");
 
       btn.textContent = "Hobbyを非表示";
-      btn.classList.remove("bg-gray-700");
-      btn.classList.add("bg-red-500", "hover:bg-red-600");
+      btn.classList.remove("btn-secondary");
+      btn.classList.add("btn-error");
     }
 
     function hideHobby() {
@@ -152,26 +181,11 @@
       section.classList.add("hidden");
 
       btn.textContent = "Hobbyを表示";
-      btn.classList.remove("bg-red-500", "hover:bg-red-600");
-      btn.classList.add("bg-gray-700");
+      btn.classList.remove("btn-error");
+      btn.classList.add("btn-secondary");
     }
-
-    document.querySelectorAll("input").forEach(el => {
-      el.addEventListener("change", () => {
-        el.blur();
-      });
-
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") el.blur();
-      });
-    });
-
-    document.addEventListener("pointerdown", (e) => {
-      if (!e.target.closest("input")) {
-        document.activeElement?.blur();
-      }
-    });
   </script>
+
 </body>
 
 </html>

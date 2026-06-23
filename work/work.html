@@ -4,61 +4,16 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/png" href="/icon.png">
   <title>仕事系ツール目次</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 50px;
-    }
-    h1 {
-      font-size: 36px;
-      margin-bottom: 30px;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      margin: 20px 0;
-    }
-    a {
-      font-size: 24px;
-      text-decoration: none;
-      color: #007bff;
-      transition: color 0.2s;
-    }
-    a:hover {
-      color: #0056b3;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/site.css">
 </head>
-<body>
+<body class="menu-page">
   <h1>仕事系ツール目次</h1>
 
-  <ul>
-    <li><a href="income_tax/income.html">所得税 計算</a></li>
+  <ul class="menu-list">
+    <li><a class="menu-link" href="income_tax/income.html">所得税 計算</a></li>
   </ul>
+
+  <a href="/index.html" id="back-button">目次に戻る</a>
 </body>
-
-<style>
-  #back-button {
-    position: fixed;   /* 画面に固定 */
-    top: 20px;         /* 上から20px */
-    right: 20px;        /* 右から20px */
-    font-size: 20px;
-    padding: 5px 10px;
-    background-color: #eee;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    text-decoration: none;
-    color: #000;
-    z-index: 1000;     /* 他の要素より前に表示 */
-  }
-  #back-button:hover {
-    background-color: #ddd;
-  }
-</style>
-
-<a href="/index.html" id="back-button">目次に戻る</a>
 
 </html>

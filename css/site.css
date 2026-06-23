@@ -1,0 +1,135 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Yu Gothic", "Noto Sans JP", sans-serif;
+  color: #f8fafc;
+  background-color: #020617;
+}
+
+.page-shell {
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 22%),
+    linear-gradient(135deg, #020617 0%, #111827 55%, #0f172a 100%);
+}
+
+.main-container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.hero-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.hero-title {
+  font-size: clamp(3rem, 4vw, 5rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  margin-bottom: 0.75rem;
+  line-height: 1;
+}
+
+.hero-subtitle {
+  color: #cbd5e1;
+  font-size: 1.1rem;
+}
+
+.page-card {
+  background-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.35);
+  border-radius: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card-body {
+  padding: 2rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.grid-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.btn-scale {
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.btn-scale:hover {
+  transform: scale(1.02);
+}
+
+.toggle-area {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.hobby-card.hidden {
+  display: none;
+}
+
+.menu-page {
+  text-align: center;
+  padding: 4rem 1.5rem;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-list li {
+  margin: 1.5rem 0;
+}
+
+.menu-link {
+  font-size: 1.5rem;
+  color: #60a5fa;
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.menu-link:hover {
+  color: #93c5fd;
+  transform: translateX(4px);
+}
+
+#back-button,
+.back-button {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  font-size: 1rem;
+  padding: 0.65rem 1rem;
+  background: rgba(248, 250, 252, 0.92);
+  color: #0f172a;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  text-decoration: none;
+  z-index: 1000;
+}
+
+#back-button:hover,
+.back-button:hover {
+  background: #f8fafc;
+}

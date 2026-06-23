@@ -13,34 +13,35 @@
 
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
+<body class="page-shell">
 
-  <div class="max-w-5xl mx-auto p-6">
+  <div class="main-container">
 
     <!-- Header -->
-    <div class="text-center mb-10">
-      <h1 class="text-5xl font-black tracking-tight mb-3">
+    <div class="hero-header">
+      <h1 class="hero-title">
         My Tools
       </h1>
 
-      <p class="text-slate-400">
+      <p class="hero-subtitle">
         Personal Dashboard
       </p>
     </div>
 
     <!-- Work -->
-    <div class="card bg-white/10 backdrop-blur-xl border border-white/10 shadow-2xl mb-8">
+    <div class="page-card">
 
       <div class="card-body">
 
-        <h2 class="card-title text-2xl mb-4">
+        <h2 class="section-title">
           <i class="fa-solid fa-briefcase"></i>
           Work
         </h2>
 
-        <div class="grid md:grid-cols-2 gap-4">
+        <div class="grid-two-col">
 
           <a href="work/income_tax/income.html"
             class="btn btn-primary btn-lg hover:scale-[1.02] transition-all duration-300">
@@ -49,7 +50,7 @@
           </a>
 
           <a href="work/rent/rent.html"
-            class="btn btn-primary btn-lg hover:scale-[1.02] transition-all duration-300">
+            class="btn btn-primary btn-lg btn-scale">
             <i class="fa-solid fa-house"></i>
             家賃
           </a>
@@ -59,11 +60,11 @@
     </div>
 
     <!-- Toggle -->
-    <div class="text-center mb-8">
+    <div class="toggle-area">
 
       <button id="toggle-btn"
         onclick="toggleHobby()"
-        class="btn btn-secondary btn-wide">
+        class="btn btn-secondary btn-wide btn-scale">
         Hobbyを表示
       </button>
 
@@ -71,7 +72,7 @@
 
     <!-- Hobby -->
     <div id="hobby-section"
-      class="card bg-white/10 backdrop-blur-xl border border-white/10 shadow-2xl hidden">
+      class="page-card hobby-card hidden">
 
       <div class="card-body">
 

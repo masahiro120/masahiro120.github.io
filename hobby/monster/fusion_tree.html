@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="night">
 
 <head>
   <meta charset="UTF-8">
@@ -7,64 +7,68 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <title>ドラクエ</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
 
   <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
 </head>
 
-<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+<body class="page-shell">
 
-	<div class="max-w-2xl mx-auto">
+	<div class="main-container">
+		<div class="page-card">
+			<div class="card-body">
 
-		<!-- ヘッダー -->
-		<div class="flex items-center mb-6">
+				<div class="section-title">
+					<h1 class="hero-title" style="font-size: 2.5rem;">ドラクエ</h1>
+					<a href="/index.html" class="back-button">← 戻る</a>
+				</div>
 
-			<h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-				ドラクエ
-			</h1>
+				<div class="space-y-6">
 
-			<a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
-				← 戻る
-			</a>
+					<!-- カード -->
+					<div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
 
+					  <!-- ラジオ -->
+					  <div class="flex justify-center gap-6 text-lg">
+					    <label class="flex items-center gap-2">
+					      <input type="radio" id="target" name="formula" value="target" checked>
+					      個別検索
+					    </label>
+					    <label class="flex items-center gap-2">
+					      <input type="radio" id="all" name="formula" value="all">
+					      未所持すべて表示
+					    </label>
+					  </div>
+
+					  <input type="hidden" id="func_type" value="target">
+
+					  <!-- 入力 -->
+					  <div id="target-form">
+					    <input type="text" id="input_monster_name" placeholder="モンスター名を入力"
+						      class="w-full p-3 text-lg border rounded-lg bg-white text-black focus:ring-2 focus:ring-blue-400">
+					  </div>
+
+					  <!-- ボタン -->
+					  <button id="run" onclick="main()" disabled
+					    class="w-full bg-green-500 text-white py-3 rounded-lg text-lg hover:bg-green-600 disabled:bg-gray-400">
+					    検索する
+					  </button>
+
+					  <!-- 出力 -->
+					  <pre id="output" class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre overflow-x-auto"></pre>
+
+					</div>
+				</div>
+			</div>
 		</div>
-
-    <!-- カード -->
-    <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-
-      <!-- ラジオ -->
-      <div class="flex justify-center gap-6 text-lg">
-        <label class="flex items-center gap-2">
-          <input type="radio" id="target" name="formula" value="target" checked>
-          個別検索
-        </label>
-        <label class="flex items-center gap-2">
-          <input type="radio" id="all" name="formula" value="all">
-          未所持すべて表示
-        </label>
-      </div>
-
-      <input type="hidden" id="func_type" value="target">
-
-      <!-- 入力 -->
-      <div id="target-form">
-        <input type="text" id="input_monster_name" placeholder="モンスター名を入力"
-          class="w-full p-3 text-lg border rounded-lg focus:ring-2 focus:ring-blue-400">
-      </div>
-
-      <!-- ボタン -->
-      <button id="run" onclick="main()" disabled
-        class="w-full bg-green-500 text-white py-3 rounded-lg text-lg hover:bg-green-600 disabled:bg-gray-400">
-        検索する
-      </button>
-
-      <!-- 出力 -->
-      <pre id="output" class="hidden bg-gray-100 p-4 rounded-lg border text-sm whitespace-pre overflow-x-auto"></pre>
-
-    </div>
-  </div>
+	</div>
 
   <script>
     let pyodide;

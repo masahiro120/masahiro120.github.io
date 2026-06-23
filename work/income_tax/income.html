@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="night">
 
 <head>
   <meta charset="UTF-8">
@@ -7,29 +7,26 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <title>税金</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
 </head>
 
-<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen p-6">
+<body class="page-shell">
 
-  <div class="max-w-2xl mx-auto">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body">
 
-    <!-- ヘッダー -->
-    <div class="flex items-center mb-8">
+        <div class="section-title">
+          <h1 class="hero-title" style="font-size: 2.5rem;">税金</h1>
+          <a href="/index.html" class="back-button">← 戻る</a>
+        </div>
 
-      <!-- タイトル（左） -->
-      <h1 class="text-3xl font-bold text-gray-800">
-        税金
-      </h1>
-
-      <!-- 戻る（右寄せ） -->
-      <a href="/index.html" class="ml-auto bg-white shadow px-4 py-2 rounded-lg hover:bg-gray-100">
-        ← 戻る
-      </a>
-
-    </div>
-
-    <!-- カード -->
-    <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+        <div class="space-y-6">
 
       <!-- ラジオ -->
 			<div class="flex flex-col md:flex-row gap-3 text-sm md:text-base">
@@ -44,17 +41,17 @@
 
       <!-- 入力 -->
       <div>
-        <label class="block text-lg font-semibold mb-2 text-gray-700">
+        <label class="block text-lg font-semibold mb-2 text-slate-200">
           年収（万円）
         </label>
         <input type="number" id="input_income"
-          class="w-full text-xl p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          class="w-full text-xl p-3 border rounded-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
           placeholder="例：500">
       </div>
 
       <!-- ボタン -->
       <button onclick="main()"
-        class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition">
+        class="w-full btn-scale bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition">
         計算
       </button>
 
@@ -63,6 +60,8 @@
       <div id="output2" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
       <div id="output3" class="hidden bg-gray-50 p-6 rounded-xl border space-y-4"></div>
 
+        </div>
+      </div>
     </div>
   </div>
 

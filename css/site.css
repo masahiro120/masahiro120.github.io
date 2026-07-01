@@ -2,6 +2,17 @@
   color-scheme: dark;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: "Inter", "Yu Gothic", "Noto Sans JP", sans-serif;
@@ -16,9 +27,9 @@ body {
 }
 
 .main-container {
-  max-width: 80rem;
+  width: min(100%, 80rem);
   margin: 0 auto;
-  padding: 2rem 1.25rem;
+  padding: 2rem clamp(0.75rem, 3vw, 1.25rem);
 }
 
 .hero-header {
@@ -49,7 +60,7 @@ body {
 }
 
 .card-body {
-  padding: 2rem;
+  padding: clamp(1rem, 3.5vw, 2rem);
 }
 
 .section-title {
@@ -144,6 +155,14 @@ body {
 }
 
 @media (max-width: 640px) {
+  .main-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
   .section-title {
     flex-direction: column;
     align-items: flex-start;

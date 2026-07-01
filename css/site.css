@@ -70,6 +70,18 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.section-title-inline {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.section-title-inline .hero-title {
+  margin: 0;
+  line-height: 1.05;
+  flex: 1;
+  min-width: 0;
+}
+
 .section-title h2 {
   margin: 0;
   font-size: 1.75rem;
@@ -168,8 +180,18 @@ body {
     align-items: flex-start;
   }
 
+  .section-title.section-title-inline {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
   .back-button-inline {
     margin-left: 0;
     align-self: flex-end;
+  }
+
+  .section-title.section-title-inline .back-button-inline {
+    margin-left: 0.5rem;
+    align-self: auto;
   }
 }

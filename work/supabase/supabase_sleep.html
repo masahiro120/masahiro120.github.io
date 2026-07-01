@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supabase テーブル表示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="section-title">
+          <h1 class="hero-title" style="font-size: 2.5rem;">Supabase テーブル表示</h1>
+          <a href="/index.html" class="back-button">← 戻る</a>
+        </div>
+
+        <div class="space-y-6">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p class="font-semibold mb-2">自動表示モード（sleep テーブル）</p>
+            <p>このページは `sleep` テーブルの内容を自動で読み込み、表として表示します。入力欄は不要です。</p>
+            <p class="mt-2 text-xs text-slate-500">※読み取りに失敗する場合は、プロジェクトのRLS設定やAnonキーの権限、CORS設定を確認してください。</p>
+          </div>
+
+          <div id="status" class="text-sm text-slate-600"></div>
+          <div id="table-container" class="overflow-x-auto"></div>
+          <pre id="raw-json" class="hidden bg-slate-900 text-slate-100 p-4 rounded mt-4 overflow-auto text-xs"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const tableContainer = document.getElementById('table-container');
+    const rawJson = document.getElementById('raw-json');
+
+    // 固定値: このページは sleep テーブル専用
+    const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+    const TABLE_NAME = "sleep";
+    const LIMIT = 100;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTable();
+    });
+
+    async function loadTable() {
+      statusEl.textContent = '読み込み中...';
+      tableContainer.innerHTML = '';
+      rawJson.classList.add('hidden');
+
+      try {
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data, error } = await supabase.from(TABLE_NAME).select('*').limit(LIMIT);
+
+        console.log('supabase response', { data, error });
+
+        if (error) {
+          // エラーメッセージを詳しく表示
+          statusEl.textContent = `取得に失敗しました: ${error.message || error}`;
+          rawJson.textContent = JSON.stringify(error, null, 2);
+          rawJson.classList.remove('hidden');
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          statusEl.textContent = '表示できるデータがありませんでした。 (length=0)';
+          rawJson.textContent = JSON.stringify({ data }, null, 2);
+          rawJson.classList.remove('hidden');
+          return;
+        }
+
+        statusEl.textContent = `${data.length}件を表示しました。`;
+        renderTable(data);
+        rawJson.textContent = JSON.stringify(data.slice(0, 10), null, 2);
+        rawJson.classList.remove('hidden');
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = `取得に失敗しました: ${err.message || err}`;
+        rawJson.textContent = String(err);
+        rawJson.classList.remove('hidden');
+      }
+    }
+
+    function renderTable(rows) {
+      const keys = Object.keys(rows[0]);
+      const header = keys.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left">${escapeHtml(key)}</th>`).join('');
+      const body = rows.map(row => {
+        const cells = keys.map(key => `<td class="border px-3 py-2 align-top">${escapeHtml(formatValue(row[key]))}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      tableContainer.innerHTML = `
+        <div class="rounded-xl border border-slate-200 overflow-hidden">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr>${header}</tr>
+            </thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>

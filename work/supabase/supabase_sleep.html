@@ -27,16 +27,20 @@
 
           <div id="status" class="text-sm text-slate-600"></div>
 
-          <div class="grid grid-cols-2 gap-2 w-full">
-            <button id="tab-table" data-tab="table" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">テーブル</button>
-            <button id="tab-graph" data-tab="graph" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">グラフ</button>
+          <div class="w-full rounded-3xl bg-slate-900/70 p-1">
+            <div class="grid grid-cols-2 gap-1">
+              <button id="tab-table" data-tab="table" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Table</button>
+              <button id="tab-graph" data-tab="graph" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Graph</button>
+            </div>
           </div>
 
           <div id="table-view">
-            <div class="mb-3 grid grid-cols-3 gap-2 w-full">
-              <button id="table-range-day" data-range="day" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">日ごと</button>
-              <button id="table-range-week" data-range="week" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">週ごと</button>
-              <button id="table-range-month" data-range="month" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">月ごと</button>
+            <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
+              <div class="grid grid-cols-3 gap-1">
+                <button id="table-range-day" data-range="day" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
+                <button id="table-range-week" data-range="week" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
+                <button id="table-range-month" data-range="month" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Month</button>
+              </div>
             </div>
             <div class="mb-3 flex items-center justify-end gap-3">
               <span class="text-sm font-semibold text-slate-200">仮眠を含める</span>
@@ -84,10 +88,12 @@
             </div>
           </div>
           <div id="graph-view" class="hidden">
-            <div class="mb-3 grid grid-cols-3 gap-2 w-full">
-              <button id="graph-daily" data-graph-view="daily" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">日ごと</button>
-              <button id="graph-weekly" data-graph-view="weekly" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">週ごと</button>
-              <button id="graph-monthly" data-graph-view="monthly" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">月ごと</button>
+            <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
+              <div class="grid grid-cols-3 gap-1">
+                <button id="graph-daily" data-graph-view="daily" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
+                <button id="graph-weekly" data-graph-view="weekly" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
+                <button id="graph-monthly" data-graph-view="monthly" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Month</button>
+              </div>
             </div>
             <div class="mb-3 flex items-center justify-end gap-3">
               <span class="text-sm font-semibold text-slate-200">仮眠を含める</span>

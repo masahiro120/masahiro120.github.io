@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supabase テーブル表示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="section-title">
+          <h1 class="hero-title" style="font-size: 2.5rem;">Supabase テーブル表示</h1>
+          <a href="/index.html" class="back-button">← 戻る</a>
+        </div>
+
+        <div class="space-y-6">
+
+          <div class="flex flex-wrap gap-2">
+            <button id="show-add-form-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加</button>
+            <button id="show-edit-list-btn" class="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600">編集</button>
+          </div>
+
+          <div id="form-panel" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p id="form-title" class="font-semibold mb-3">追加 / 編集</p>
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">date</label>
+                <input id="field-date" type="date" class="w-full p-3 border rounded-lg bg-white text-black" />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">type</label>
+                <input id="field-type" type="text" class="w-full p-3 border rounded-lg bg-white text-black" placeholder="例: normal" />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">bedtime</label>
+                <input id="field-bedtime" type="time" class="w-full p-3 border rounded-lg bg-white text-black" />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">wakeup</label>
+                <input id="field-wakeup" type="time" class="w-full p-3 border rounded-lg bg-white text-black" />
+              </div>
+            </div>
+            <div class="flex gap-2 mt-4">
+              <button id="save-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加する</button>
+              <button id="cancel-btn" class="bg-slate-300 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-400">キャンセル</button>
+            </div>
+          </div>
+
+          <div id="status" class="text-sm text-slate-600"></div>
+          <div id="table-container" class="overflow-x-auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // const statusEl = document.getElementById('status');
+    const tableContainer = document.getElementById('table-container');
+    const formType = document.getElementById('field-type');
+    const formDate = document.getElementById('field-date');
+    const formBedtime = document.getElementById('field-bedtime');
+    const formWakeup = document.getElementById('field-wakeup');
+    const saveBtn = document.getElementById('save-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const formTitle = document.getElementById('form-title');
+    const formPanel = document.getElementById('form-panel');
+    const showAddFormBtn = document.getElementById('show-add-form-btn');
+    const showEditListBtn = document.getElementById('show-edit-list-btn');
+
+    // 固定値: このページは sleep テーブル専用
+    const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+    const TABLE_NAME = "sleep";
+    const LIMIT = 100;
+
+    let currentRowId = null;
+    let currentRows = [];
+    let isEditMode = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindEvents();
+      loadTable();
+    });
+
+    function bindEvents() {
+      saveBtn.addEventListener('click', saveRecord);
+      cancelBtn.addEventListener('click', resetForm);
+      showAddFormBtn.addEventListener('click', () => {
+        // isEditMode = false;
+        // showForm('add');
+        isEditMode = !isEditMode;
+        if (isEditMode) {
+          showForm('add');
+          // statusEl.textContent = '追加モードです。フォームに入力して保存してください。';
+        } else {
+          resetForm();
+          // statusEl.textContent = '操作列を非表示にしました。';
+        }
+      });
+      showEditListBtn.addEventListener('click', () => {
+        isEditMode = !isEditMode;
+        if (isEditMode) {
+          renderTable(currentRows);
+          // statusEl.textContent = '編集モードです。操作列から編集できます。';
+        } else {
+          resetForm();
+          renderTable(currentRows);
+          // statusEl.textContent = '操作列を非表示にしました。';
+        }
+      });
+      tableContainer.addEventListener('click', handleTableClick);
+    }
+
+    async function loadTable() {
+      // statusEl.textContent = '読み込み中...';
+      tableContainer.innerHTML = '';
+
+      try {
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data, error } = await supabase.from(TABLE_NAME).select('*').order('date', { ascending: false }).limit(LIMIT);
+
+        console.log('supabase response', { data, error });
+
+        if (error) {
+          // statusEl.textContent = `取得に失敗しました: ${error.message || error}`;
+          return;
+        }
+
+        currentRows = data || [];
+
+        if (!currentRows.length) {
+          // statusEl.textContent = '表示できるデータがありませんでした。 (length=0)';
+          return;
+        }
+
+        // statusEl.textContent = `${currentRows.length}件を表示しました。`;
+        renderTable(currentRows);
+      } catch (err) {
+        console.error(err);
+        // statusEl.textContent = `取得に失敗しました: ${err.message || err}`;
+      }
+    }
+
+    async function saveRecord() {
+      const payload = {
+        type: formType.value.trim(),
+        date: formDate.value,
+        bedtime: formBedtime.value,
+        wakeup: formWakeup.value
+      };
+
+      if (!payload.type || !payload.date || !payload.bedtime || !payload.wakeup) {
+        // statusEl.textContent = 'type / date / bedtime / wakeup を入力してください。';
+        return;
+      }
+
+      try {
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let result;
+        if (currentRowId) {
+          result = await supabase.from(TABLE_NAME).update(payload).eq('id', currentRowId).select();
+        } else {
+          result = await supabase.from(TABLE_NAME).insert([payload]).select();
+        }
+
+        const { data, error } = result;
+        console.log('supabase save response', { data, error });
+
+        if (error) {
+          // statusEl.textContent = `保存に失敗しました: ${error.message || error}`;
+          return;
+        }
+
+        // statusEl.textContent = currentRowId ? '更新しました。' : '追加しました。';
+        resetForm();
+        await loadTable();
+      } catch (err) {
+        console.error(err);
+        // statusEl.textContent = `保存に失敗しました: ${err.message || err}`;
+      }
+    }
+
+    function handleTableClick(event) {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      const action = button.getAttribute('data-action');
+      const rowId = button.getAttribute('data-id');
+      const row = currentRows.find(item => String(getRowId(item)) === String(rowId));
+
+      if (!row) return;
+
+      if (action === 'edit') {
+        fillForm(row);
+      } else if (action === 'delete') {
+        deleteRow(row);
+      }
+    }
+
+    function showForm(mode) {
+      formPanel.classList.remove('hidden');
+      if (mode === 'edit') {
+        formTitle.textContent = '編集';
+        saveBtn.textContent = '更新する';
+      } else {
+        clearForm();
+        formTitle.textContent = '追加';
+        saveBtn.textContent = '追加する';
+      }
+    }
+
+    function fillForm(row) {
+      formType.value = row.type || '';
+      formDate.value = row.date || '';
+      formBedtime.value = row.bedtime || '';
+      formWakeup.value = row.wakeup || '';
+      currentRowId = getRowId(row);
+      showForm('edit');
+    }
+
+    function clearForm() {
+      formType.value = '';
+      formDate.value = '';
+      formBedtime.value = '';
+      formWakeup.value = '';
+      currentRowId = null;
+    }
+
+    function resetForm() {
+      clearForm();
+      formPanel.classList.add('hidden');
+      formTitle.textContent = '追加 / 編集';
+      saveBtn.textContent = '追加する';
+      isEditMode = false;
+      renderTable(currentRows);
+    }
+
+    async function deleteRow(row) {
+      if (!confirm('この行を削除しますか？')) return;
+
+      const rowId = getRowId(row);
+      if (!rowId) {
+        // statusEl.textContent = '削除対象の ID が見つかりません。';
+        return;
+      }
+
+      try {
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { error } = await supabase.from(TABLE_NAME).delete().eq('id', rowId);
+
+        if (error) {
+          // statusEl.textContent = `削除に失敗しました: ${error.message || error}`;
+          return;
+        }
+
+        // statusEl.textContent = '削除しました。';
+        isEditMode = false;
+        await loadTable();
+      } catch (err) {
+        console.error(err);
+        // statusEl.textContent = `削除に失敗しました: ${err.message || err}`;
+      }
+    }
+
+    function getRowId(row) {
+      if (!row) return null;
+      return row.id ?? row.ID ?? row.uuid ?? row._id ?? null;
+    }
+
+    function renderTable(rows) {
+      const visibleKeys = ['date', 'type', 'bedtime', 'wakeup'].filter(key => rows.some(row => row[key] !== undefined && row[key] !== null));
+      const headerCells = [...visibleKeys];
+      if (isEditMode) headerCells.push('操作');
+      const header = headerCells.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left text-blue-800">${escapeHtml(key)}</th>`).join('');
+      const body = rows.map(row => {
+        const rowId = getRowId(row);
+        const cells = visibleKeys.map(key => `<td class="border px-3 py-2 align-top">${escapeHtml(formatValue(row[key]))}</td>`).join('');
+        const actionCell = isEditMode ? `
+          <td class="border px-3 py-2 align-top">
+            <div class="flex gap-2">
+              <button data-action="edit" data-id="${rowId ?? ''}" class="bg-amber-500 text-white px-2 py-1 rounded text-xs hover:bg-amber-600">編集</button>
+              <button data-action="delete" data-id="${rowId ?? ''}" class="bg-rose-500 text-white px-2 py-1 rounded text-xs hover:bg-rose-600">削除</button>
+            </div>
+          </td>` : '';
+        return `<tr>${cells}${actionCell}</tr>`;
+      }).join('');
+
+      tableContainer.innerHTML = `
+        <div class="rounded-xl border border-slate-200 overflow-hidden">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr>${header}</tr>
+            </thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') return JSON.stringify(value);
+      if (typeof value === 'string') {
+        // 23:12:00 のような HH:mm:ss 形式を HH:mm に変換
+        const mFull = value.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+        if (mFull) {
+          const hours = Number(mFull[1]);
+          const minutes = Number(mFull[2]);
+          if (Number.isFinite(hours) && Number.isFinite(minutes)) {
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          }
+        }
+        // 既に HH:mm の場合
+        const mShort = value.match(/^(\d{1,2}):(\d{2})$/);
+        if (mShort) {
+          const hours = Number(mShort[1]);
+          const minutes = Number(mShort[2]);
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+      }
+      return String(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>

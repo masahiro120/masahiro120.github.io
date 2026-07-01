@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supabase テーブル表示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="section-title">
+          <h1 class="hero-title" style="font-size: 2.5rem;">Supabase テーブル表示</h1>
+          <a href="/index.html" class="back-button">← 戻る</a>
+        </div>
+
+        <div class="space-y-6">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p class="font-semibold mb-2">使い方</p>
+            <p>SupabaseのプロジェクトURL・anon key・対象テーブル名を入力すると、内容を表として表示できます。</p>
+            <p class="mt-2 text-xs text-slate-500">※テーブルが公開されていて、RLSで読み取り可能な状態である必要があります。</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-slate-700">Supabase URL</label>
+              <input id="supabase-url" type="url" placeholder="https://xxxx.supabase.co"
+                class="w-full p-3 border rounded-lg bg-white text-black" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-slate-700">anon key</label>
+              <input id="supabase-key" type="text" placeholder="eyJ..."
+                class="w-full p-3 border rounded-lg bg-white text-black" />
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">テーブル名</label>
+                <input id="table-name" type="text" placeholder="profiles"
+                  class="w-full p-3 border rounded-lg bg-white text-black" />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-slate-700">件数上限</label>
+                <input id="limit" type="number" min="1" max="1000" value="100"
+                  class="w-full p-3 border rounded-lg bg-white text-black" />
+              </div>
+            </div>
+
+            <button id="load-btn"
+              class="w-full bg-blue-500 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition">
+              データを読み込む
+            </button>
+          </div>
+
+          <div id="status" class="text-sm text-slate-600"></div>
+          <div id="table-container" class="overflow-x-auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loadBtn = document.getElementById('load-btn');
+    const statusEl = document.getElementById('status');
+    const tableContainer = document.getElementById('table-container');
+
+    loadBtn.addEventListener('click', loadTable);
+
+    async function loadTable() {
+      // const supabaseUrl = document.getElementById('supabase-url').value.trim();
+      // const supabaseKey = document.getElementById('supabase-key').value.trim();
+      // const tableName = document.getElementById('table-name').value.trim();
+      const supabaseUrl = "https://jpkycfgmgmrhuqambtxm.supabase.co"
+      const supabaseKey = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB"
+      const tableName = "sleep"
+      const limit = Number(document.getElementById('limit').value || 100);
+
+      statusEl.textContent = '読み込み中...';
+      tableContainer.innerHTML = '';
+
+      if (!supabaseUrl || !supabaseKey || !tableName) {
+        statusEl.textContent = 'URL・key・テーブル名を入力してください。';
+        return;
+      }
+
+      try {
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const { data, error } = await supabase.from(tableName).select('*').limit(limit);
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          statusEl.textContent = '表示できるデータがありませんでした。';
+          return;
+        }
+
+        statusEl.textContent = `${data.length}件を表示しました。`;
+        renderTable(data);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = `取得に失敗しました: ${err.message || err}`;
+      }
+    }
+
+    function renderTable(rows) {
+      const keys = Object.keys(rows[0]);
+      const header = keys.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left">${escapeHtml(key)}</th>`).join('');
+      const body = rows.map(row => {
+        const cells = keys.map(key => `<td class="border px-3 py-2 align-top">${escapeHtml(formatValue(row[key]))}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      tableContainer.innerHTML = `
+        <div class="rounded-xl border border-slate-200 overflow-hidden">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr>${header}</tr>
+            </thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>

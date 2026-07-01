@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Supabase テーブル表示</title>
+  <title>睡眠時間管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -17,45 +17,84 @@
     <div class="page-card">
       <div class="card-body">
         <div class="section-title">
-          <h1 class="hero-title" style="font-size: 2.5rem;">Supabase テーブル表示</h1>
-          <a href="/index.html" class="back-button">← 戻る</a>
+          <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">睡眠時間管理</h1>
+          <a href="/index.html" class="back-button back-button-inline">← 戻る</a>
         </div>
 
         <div class="space-y-6">
 
-          <div class="flex flex-wrap gap-2">
-            <button id="show-add-form-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加</button>
-            <button id="show-edit-list-btn" class="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600">編集</button>
-          </div>
 
-          <div id="form-panel" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <p id="form-title" class="font-semibold mb-3">追加 / 編集</p>
-            <div class="grid md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-semibold mb-2 text-slate-700">date</label>
-                <input id="field-date" type="date" class="w-full p-3 border rounded-lg bg-white text-black" />
-              </div>
-              <div>
-                <label class="block text-sm font-semibold mb-2 text-slate-700">type</label>
-                <input id="field-type" type="text" class="w-full p-3 border rounded-lg bg-white text-black" placeholder="例: normal" />
-              </div>
-              <div>
-                <label class="block text-sm font-semibold mb-2 text-slate-700">bedtime</label>
-                <input id="field-bedtime" type="time" class="w-full p-3 border rounded-lg bg-white text-black" />
-              </div>
-              <div>
-                <label class="block text-sm font-semibold mb-2 text-slate-700">wakeup</label>
-                <input id="field-wakeup" type="time" class="w-full p-3 border rounded-lg bg-white text-black" />
-              </div>
-            </div>
-            <div class="flex gap-2 mt-4">
-              <button id="save-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加する</button>
-              <button id="cancel-btn" class="bg-slate-300 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-400">キャンセル</button>
-            </div>
-          </div>
 
           <div id="status" class="text-sm text-slate-600"></div>
-          <div id="table-container" class="overflow-x-auto"></div>
+
+          <div class="grid grid-cols-2 gap-2 w-full">
+            <button id="tab-table" data-tab="table" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">テーブル</button>
+            <button id="tab-graph" data-tab="graph" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">グラフ</button>
+          </div>
+
+          <div id="table-view">
+            <div class="mb-3 grid grid-cols-3 gap-2 w-full">
+              <button id="table-range-day" data-range="day" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">日ごと</button>
+              <button id="table-range-week" data-range="week" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">週ごと</button>
+              <button id="table-range-month" data-range="month" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">月ごと</button>
+            </div>
+            <div class="mb-3 flex items-center justify-end gap-3">
+              <span class="text-sm font-semibold text-slate-200">仮眠を含める</span>
+              <input id="table-include-nap-toggle" type="checkbox" class="toggle toggle-primary" checked />
+            </div>
+            <div id="summary-container" class="mb-4"></div>
+            <div class="mb-3 w-full">
+              <button id="detail-toggle-btn" class="w-full rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">詳細</button>
+            </div>
+            <div id="detail-panel" class="hidden space-y-4">
+              <div class="grid grid-cols-2 gap-2 w-full">
+                <button id="detail-add-btn" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加</button>
+                <button id="detail-edit-btn" class="w-full bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600">編集</button>
+              </div>
+              <div id="form-panel" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p id="form-title" class="font-semibold mb-3">追加 / 編集</p>
+                <div class="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">日付</label>
+                    <input id="field-date" type="date" class="block h-14 w-full min-w-0 max-w-full box-border px-4 py-0 leading-[3.25rem] border rounded-lg bg-white text-black" style="inline-size:100%;min-inline-size:0;max-inline-size:100%;-webkit-appearance:none;appearance:none;" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">タイプ</label>
+                    <select id="field-type" class="block h-14 w-full min-w-0 max-w-full box-border px-4 border rounded-lg bg-white text-center text-black" style="inline-size:100%;min-inline-size:0;max-inline-size:100%;-webkit-appearance:none;appearance:none;text-align-last:center;-moz-text-align-last:center;">
+                      <option value="" selected>選択してください</option>
+                      <option value="就寝">就寝</option>
+                      <option value="仮眠">仮眠</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">就寝時間</label>
+                    <input id="field-bedtime" type="time" class="block h-14 w-full min-w-0 max-w-full box-border px-4 py-0 leading-[3.25rem] border rounded-lg bg-white text-black" style="inline-size:100%;min-inline-size:0;max-inline-size:100%;-webkit-appearance:none;appearance:none;" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">起床時間</label>
+                    <input id="field-wakeup" type="time" class="block h-14 w-full min-w-0 max-w-full box-border px-4 py-0 leading-[3.25rem] border rounded-lg bg-white text-black" style="inline-size:100%;min-inline-size:0;max-inline-size:100%;-webkit-appearance:none;appearance:none;" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4 w-full">
+                  <button id="save-btn" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">追加する</button>
+                  <button id="cancel-btn" class="w-full bg-slate-300 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-400">キャンセル</button>
+                </div>
+              </div>
+              <div id="table-container" class="overflow-x-auto"></div>
+            </div>
+          </div>
+          <div id="graph-view" class="hidden">
+            <div class="mb-3 grid grid-cols-3 gap-2 w-full">
+              <button id="graph-daily" data-graph-view="daily" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white">日ごと</button>
+              <button id="graph-weekly" data-graph-view="weekly" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">週ごと</button>
+              <button id="graph-monthly" data-graph-view="monthly" class="w-full rounded-lg px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">月ごと</button>
+            </div>
+            <div class="mb-3 flex items-center justify-end gap-3">
+              <span class="text-sm font-semibold text-slate-200">仮眠を含める</span>
+              <input id="graph-include-nap-toggle" type="checkbox" class="toggle toggle-primary" checked />
+            </div>
+            <div id="graph-container" class="rounded-xl border border-slate-200 bg-slate-50 p-4"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -64,6 +103,15 @@
   <script>
     // const statusEl = document.getElementById('status');
     const tableContainer = document.getElementById('table-container');
+    const summaryContainer = document.getElementById('summary-container');
+    const graphContainer = document.getElementById('graph-container');
+    const tableView = document.getElementById('table-view');
+    const graphView = document.getElementById('graph-view');
+    const detailPanel = document.getElementById('detail-panel');
+    const detailToggleBtn = document.getElementById('detail-toggle-btn');
+    const tabButtons = document.querySelectorAll('[data-tab]');
+    const graphModeButtons = document.querySelectorAll('[data-graph-view]');
+    const rangeButtons = document.querySelectorAll('[data-range]');
     const formType = document.getElementById('field-type');
     const formDate = document.getElementById('field-date');
     const formBedtime = document.getElementById('field-bedtime');
@@ -74,6 +122,10 @@
     const formPanel = document.getElementById('form-panel');
     const showAddFormBtn = document.getElementById('show-add-form-btn');
     const showEditListBtn = document.getElementById('show-edit-list-btn');
+    const detailAddBtn = document.getElementById('detail-add-btn');
+    const detailEditBtn = document.getElementById('detail-edit-btn');
+    const tableIncludeNapToggle = document.getElementById('table-include-nap-toggle');
+    const graphIncludeNapToggle = document.getElementById('graph-include-nap-toggle');
 
     // 固定値: このページは sleep テーブル専用
     const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
@@ -84,39 +136,130 @@
     let currentRowId = null;
     let currentRows = [];
     let isEditMode = false;
+    let activeView = 'table';
+    let activeGraphView = 'daily';
+    let activeTableRange = 'day';
+    let isDetailVisible = false;
+    let includeNapInSleep = true;
 
     document.addEventListener('DOMContentLoaded', () => {
       bindEvents();
       loadTable();
     });
 
+    function updateRangeButtonStyles() {
+      rangeButtons.forEach(button => {
+        const isActive = button.getAttribute('data-range') === activeTableRange;
+        button.classList.toggle('bg-blue-600', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('bg-slate-200', !isActive);
+        button.classList.toggle('text-slate-700', !isActive);
+      });
+    }
+
+    function updateGraphModeButtonStyles() {
+      graphModeButtons.forEach(button => {
+        const isActive = button.getAttribute('data-graph-view') === activeGraphView;
+        button.classList.toggle('bg-blue-600', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('bg-slate-200', !isActive);
+        button.classList.toggle('text-slate-700', !isActive);
+      });
+    }
+
+    function toGraphView(tableRange) {
+      const map = { day: 'daily', week: 'weekly', month: 'monthly' };
+      return map[tableRange] || 'daily';
+    }
+
+    function toTableRange(graphViewMode) {
+      const map = { daily: 'day', weekly: 'week', monthly: 'month' };
+      return map[graphViewMode] || 'day';
+    }
+
+    function updateDetailToggleState() {
+      detailPanel.classList.toggle('hidden', !isDetailVisible);
+      detailToggleBtn.textContent = isDetailVisible ? '詳細を閉じる' : '詳細';
+      detailToggleBtn.classList.toggle('bg-blue-600', isDetailVisible);
+      detailToggleBtn.classList.toggle('text-white', isDetailVisible);
+      detailToggleBtn.classList.toggle('bg-slate-200', !isDetailVisible);
+      detailToggleBtn.classList.toggle('text-slate-700', !isDetailVisible);
+    }
+
+    function syncIncludeNapToggleUI() {
+      if (tableIncludeNapToggle) tableIncludeNapToggle.checked = includeNapInSleep;
+      if (graphIncludeNapToggle) graphIncludeNapToggle.checked = includeNapInSleep;
+    }
+
     function bindEvents() {
       saveBtn.addEventListener('click', saveRecord);
       cancelBtn.addEventListener('click', resetForm);
-      showAddFormBtn.addEventListener('click', () => {
-        // isEditMode = false;
-        // showForm('add');
-        isEditMode = !isEditMode;
-        if (isEditMode) {
+
+      const toggleAddForm = () => {
+        const willShow = formPanel.classList.contains('hidden');
+        if (willShow) {
+          currentRowId = null;
+          isEditMode = false;
           showForm('add');
-          // statusEl.textContent = '追加モードです。フォームに入力して保存してください。';
+          renderTable(currentRows);
         } else {
           resetForm();
-          // statusEl.textContent = '操作列を非表示にしました。';
         }
-      });
-      showEditListBtn.addEventListener('click', () => {
+      };
+
+      const toggleEditMode = () => {
         isEditMode = !isEditMode;
-        if (isEditMode) {
-          renderTable(currentRows);
-          // statusEl.textContent = '編集モードです。操作列から編集できます。';
-        } else {
-          resetForm();
-          renderTable(currentRows);
-          // statusEl.textContent = '操作列を非表示にしました。';
+        if (!formPanel.classList.contains('hidden')) {
+          clearForm();
+          formPanel.classList.add('hidden');
+          formTitle.textContent = '追加 / 編集';
+          saveBtn.textContent = '追加する';
         }
+        renderTable(currentRows);
+      };
+
+      [showAddFormBtn, detailAddBtn].forEach(button => {
+        if (button) button.addEventListener('click', toggleAddForm);
+      });
+      [showEditListBtn, detailEditBtn].forEach(button => {
+        if (button) button.addEventListener('click', toggleEditMode);
+      });
+
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => switchView(button.getAttribute('data-tab')));
+      });
+      graphModeButtons.forEach(button => {
+        button.addEventListener('click', () => switchGraphView(button.getAttribute('data-graph-view')));
+      });
+      rangeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          activeTableRange = button.getAttribute('data-range');
+          activeGraphView = toGraphView(activeTableRange);
+          updateRangeButtonStyles();
+          updateGraphModeButtonStyles();
+          renderTable(currentRows);
+        });
+      });
+      detailToggleBtn.addEventListener('click', () => {
+        isDetailVisible = !isDetailVisible;
+        updateDetailToggleState();
+      });
+      [tableIncludeNapToggle, graphIncludeNapToggle].forEach(toggle => {
+        if (!toggle) return;
+        toggle.addEventListener('change', () => {
+          includeNapInSleep = toggle.checked;
+          syncIncludeNapToggleUI();
+          if (activeView === 'graph') {
+            renderGraph(currentRows, activeGraphView);
+          } else {
+            renderTable(currentRows);
+          }
+        });
       });
       tableContainer.addEventListener('click', handleTableClick);
+      updateRangeButtonStyles();
+      updateGraphModeButtonStyles();
+      syncIncludeNapToggleUI();
     }
 
     async function loadTable() {
@@ -216,6 +359,7 @@
         formTitle.textContent = '追加';
         saveBtn.textContent = '追加する';
       }
+      formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function fillForm(row) {
@@ -276,27 +420,108 @@
       return row.id ?? row.ID ?? row.uuid ?? row._id ?? null;
     }
 
+    function switchView(view) {
+      activeView = view;
+      tableView.classList.toggle('hidden', view !== 'table');
+      graphView.classList.toggle('hidden', view !== 'graph');
+
+      tabButtons.forEach(button => {
+        const isActive = button.getAttribute('data-tab') === view;
+        button.classList.toggle('bg-blue-600', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('bg-slate-200', !isActive);
+        button.classList.toggle('text-slate-700', !isActive);
+      });
+
+      if (view === 'graph') {
+        renderGraph(currentRows, activeGraphView);
+      } else {
+        renderTable(currentRows);
+      }
+    }
+
+    function switchGraphView(view) {
+      activeGraphView = view;
+      activeTableRange = toTableRange(activeGraphView);
+      updateGraphModeButtonStyles();
+      updateRangeButtonStyles();
+      if (activeView === 'graph') {
+        renderGraph(currentRows, activeGraphView);
+      }
+    }
+
     function renderTable(rows) {
+      renderSummary(rows);
+      renderDetailList(rows);
+    }
+
+    function renderSummary(rows) {
+      const summaryRows = buildAverageSeries(rows, activeTableRange);
+      if (!summaryRows.length) {
+        summaryContainer.innerHTML = '';
+        return;
+      }
+
+      const rowsHtml = summaryRows.map(item => `
+        <tr>
+          <td class="border px-3 py-2 align-top">${escapeHtml(item.label)}</td>
+          <td class="border px-3 py-2 align-top">${escapeHtml(item.averageText)}</td>
+        </tr>
+      `).join('');
+
+      const titleMap = {
+        day: '日ごとの睡眠時間',
+        week: '週ごとの平均睡眠時間',
+        month: '月ごとの平均睡眠時間'
+      };
+
+      summaryContainer.innerHTML = `
+        <div class="mb-4 rounded-xl border border-slate-200 overflow-hidden">
+          <div class="bg-slate-100 px-3 py-2 text-sm font-semibold text-blue-800">${titleMap[activeTableRange] || '睡眠時間'}</div>
+          <table class="w-full table-fixed text-sm">
+            <thead>
+              <tr>
+                <th class="w-1/2 border px-3 py-2 bg-slate-50 text-left text-blue-800">範囲</th>
+                <th class="w-1/2 border px-3 py-2 bg-slate-50 text-left text-blue-800">睡眠時間</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderDetailList(rows) {
       const visibleKeys = ['date', 'type', 'bedtime', 'wakeup'].filter(key => rows.some(row => row[key] !== undefined && row[key] !== null));
+      const headerLabels = {
+        date: '日付',
+        type: 'タイプ',
+        bedtime: '就寝時間',
+        wakeup: '起床時間',
+        操作: '操作'
+      };
       const headerCells = [...visibleKeys];
       if (isEditMode) headerCells.push('操作');
-      const header = headerCells.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left text-blue-800">${escapeHtml(key)}</th>`).join('');
+      const header = headerCells.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left text-blue-800 whitespace-nowrap">${escapeHtml(headerLabels[key] || key)}</th>`).join('');
+      const columnWidth = headerCells.length ? `${(100 / headerCells.length).toFixed(2)}%` : '100%';
+      const colgroup = headerCells.map(() => `<col style="width:${columnWidth}">`).join('');
       const body = rows.map(row => {
         const rowId = getRowId(row);
-        const cells = visibleKeys.map(key => `<td class="border px-3 py-2 align-top">${escapeHtml(formatValue(row[key]))}</td>`).join('');
+        const cells = visibleKeys.map(key => `<td class="border px-3 py-2 align-top whitespace-nowrap">${escapeHtml(formatValue(row[key]))}</td>`).join('');
         const actionCell = isEditMode ? `
           <td class="border px-3 py-2 align-top">
-            <div class="flex gap-2">
-              <button data-action="edit" data-id="${rowId ?? ''}" class="bg-amber-500 text-white px-2 py-1 rounded text-xs hover:bg-amber-600">編集</button>
-              <button data-action="delete" data-id="${rowId ?? ''}" class="bg-rose-500 text-white px-2 py-1 rounded text-xs hover:bg-rose-600">削除</button>
+            <div class="flex gap-2 w-full">
+              <button data-action="edit" data-id="${rowId ?? ''}" class="flex-1 bg-amber-500 text-white px-2 py-1 rounded text-xs hover:bg-amber-600">編集</button>
+              <button data-action="delete" data-id="${rowId ?? ''}" class="flex-1 bg-rose-500 text-white px-2 py-1 rounded text-xs hover:bg-rose-600">削除</button>
             </div>
           </td>` : '';
         return `<tr>${cells}${actionCell}</tr>`;
       }).join('');
 
       tableContainer.innerHTML = `
-        <div class="rounded-xl border border-slate-200 overflow-hidden">
-          <table class="min-w-full text-sm">
+        <div class="rounded-xl border border-slate-200 overflow-x-auto">
+          <table class="w-full min-w-[720px] table-fixed text-sm">
+            <colgroup>${colgroup}</colgroup>
             <thead>
               <tr>${header}</tr>
             </thead>
@@ -304,6 +529,342 @@
           </table>
         </div>
       `;
+    }
+
+    function buildAverageSeries(rows, mode) {
+      const dailySeries = calculateDailySleepSummary(rows);
+      if (mode === 'day') {
+        return dailySeries.map(item => ({ label: item.date, averageMinutes: item.totalMinutes, averageText: item.totalText }));
+      }
+
+      if (mode === 'week') {
+        const weeklyBuckets = new Map();
+        dailySeries.forEach(item => {
+          const date = new Date(`${item.date}T00:00:00`);
+          const weekStart = new Date(date);
+          const day = weekStart.getDay();
+          weekStart.setDate(date.getDate() - day);
+          const key = formatDateLocal(weekStart);
+          const existing = weeklyBuckets.get(key) || { total: 0, count: 0 };
+          existing.total += item.totalMinutes;
+          existing.count += 1;
+          weeklyBuckets.set(key, existing);
+        });
+        return Array.from(weeklyBuckets.entries())
+          .map(([key, bucket]) => ({
+            label: buildWeekRangeLabel(key),
+            averageMinutes: bucket.count ? Math.round(bucket.total / bucket.count) : 0,
+            averageText: formatDuration(bucket.count ? Math.round(bucket.total / bucket.count) : 0)
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+      }
+
+      const monthlyBuckets = new Map();
+      dailySeries.forEach(item => {
+        const monthKey = item.date.slice(0, 7);
+        const existing = monthlyBuckets.get(monthKey) || { total: 0, count: 0 };
+        existing.total += item.totalMinutes;
+        existing.count += 1;
+        monthlyBuckets.set(monthKey, existing);
+      });
+      return Array.from(monthlyBuckets.entries())
+        .map(([key, bucket]) => {
+          const averageMinutes = bucket.count ? Math.round(bucket.total / bucket.count) : 0;
+          const [year, month] = key.split('-');
+          return { label: `${year}-${String(Number(month)).padStart(2, '0')}`, averageMinutes, averageText: formatDuration(averageMinutes) };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    function calculateDailySleepSummary(rows) {
+      const totals = new Map();
+
+      rows.forEach(row => {
+        const date = row?.date;
+        if (!date) return;
+        if (!includeNapInSleep && isNapType(row?.type)) return;
+
+        const bedtime = parseTimeValue(row?.bedtime);
+        const wakeup = parseTimeValue(row?.wakeup);
+        if (bedtime === null || wakeup === null) return;
+
+        const durationMinutes = calculateSleepMinutes(bedtime, wakeup);
+        const current = totals.get(date) || 0;
+        totals.set(date, current + durationMinutes);
+      });
+
+      return Array.from(totals.entries())
+        .map(([date, totalMinutes]) => ({ date, totalMinutes, totalText: formatDuration(totalMinutes) }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function isNapType(typeValue) {
+      const normalized = String(typeValue || '').trim();
+      return normalized === '仮眠' || normalized === '昼寝' || normalized.toLowerCase() === 'nap';
+    }
+
+    function parseTimeValue(value) {
+      if (value === null || value === undefined) return null;
+      if (typeof value !== 'string') return null;
+      const normalized = value.trim();
+      const match = normalized.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (!match) return null;
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+      return hours * 60 + minutes;
+    }
+
+    function calculateSleepMinutes(bedtime, wakeup) {
+      let diff = wakeup - bedtime;
+      if (diff < 0) diff += 24 * 60;
+      return diff;
+    }
+
+    function formatDuration(totalMinutes) {
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${hours}時間${minutes}分`;
+    }
+
+    function formatDateLocal(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function buildWeekRangeLabel(weekStartText) {
+      const startDate = new Date(`${weekStartText}T00:00:00`);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      const endText = formatDateLocal(endDate);
+      return `${weekStartText} - ${endText}`;
+    }
+
+    function getGraphFocusIndex(summaryRows, mode) {
+      const today = new Date();
+      const todayText = formatDateLocal(today);
+
+      if (mode === 'daily') {
+        const idx = summaryRows.findIndex(item => item.key === todayText);
+        return idx >= 0 ? idx : summaryRows.length - 1;
+      }
+
+      if (mode === 'weekly') {
+        const idx = summaryRows.findIndex(item => {
+          const startText = item.startDate;
+          const endText = item.endDate;
+          if (!startText || !endText) return false;
+          return startText <= todayText && todayText <= endText;
+        });
+        return idx >= 0 ? idx : summaryRows.length - 1;
+      }
+
+      const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const idx = summaryRows.findIndex(item => item.key === monthKey);
+      return idx >= 0 ? idx : summaryRows.length - 1;
+    }
+
+    function centerGraphOnIndex(targetIndex, pointList) {
+      const scrollArea = document.getElementById('graph-scroll-area');
+      if (!scrollArea || !pointList.length) return;
+      const boundedIndex = Math.max(0, Math.min(targetIndex, pointList.length - 1));
+      const point = pointList[boundedIndex];
+      const targetLeft = point.x - scrollArea.clientWidth / 2;
+      const maxScrollLeft = Math.max(0, scrollArea.scrollWidth - scrollArea.clientWidth);
+      scrollArea.scrollLeft = Math.max(0, Math.min(targetLeft, maxScrollLeft));
+    }
+
+    function renderGraph(rows, mode = activeGraphView) {
+      const summaryRows = buildGraphSeries(rows, mode);
+      if (!summaryRows.length) {
+        graphContainer.innerHTML = '<div class="text-sm text-slate-600">表示できるデータがありません。</div>';
+        return;
+      }
+
+      const topPadding = 24;
+        const bottomPadding = mode === 'weekly' ? 88 : 70;
+      const sidePadding = 10;
+        const pointGap = mode === 'monthly' ? 85 : mode === 'weekly' ? 100 : 65;
+      const height = 420;
+      const axisWidth = 44;
+      const dataWidth = sidePadding * 2 + Math.max(summaryRows.length - 1, 1) * pointGap;
+      const viewportWidth = Math.max(320, graphContainer.clientWidth - axisWidth - 32);
+      const width = Math.max(viewportWidth, dataWidth);
+      const maxValue = Math.max(...summaryRows.map(item => item.value), 1);
+      const stepX = (width - sidePadding * 2) / Math.max(summaryRows.length - 1, 1);
+      const pointList = summaryRows.map((item, index) => {
+        const x = sidePadding + index * stepX;
+        const y = height - bottomPadding - (item.value / maxValue) * (height - topPadding - bottomPadding);
+        return { x, y, label: item.label, value: item.value };
+      });
+      const path = pointList.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+      const yAxisLabels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
+        const value = Math.round(maxValue * ratio);
+        const y = height - bottomPadding - ratio * (height - topPadding - bottomPadding);
+        return `<text x="${axisWidth - 2}" y="${y + 4}" text-anchor="end" font-size="13" fill="#64748b">${formatChartHours(value)}</text>`;
+      }).join('');
+      const yGridLines = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
+        const y = height - bottomPadding - ratio * (height - topPadding - bottomPadding);
+        return `<line x1="${sidePadding}" y1="${y}" x2="${width - sidePadding}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4 4"></line>`;
+      }).join('');
+      const pointsMarkup = pointList.map(point => {
+        let axisLabel = `<text x="${point.x}" y="${height - 18}" text-anchor="middle" font-size="12" fill="#64748b">${escapeHtml(point.label)}</text>`;
+
+        if (mode === 'weekly') {
+          const weeklyLabel = String(point.label);
+          const withYear = weeklyLabel.match(/^(\d{4})\s+(.+)$/);
+          if (withYear) {
+            axisLabel = `
+              <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#64748b">
+                <tspan x="${point.x}" dy="0">${escapeHtml(withYear[1])}</tspan>
+                <tspan x="${point.x}" dy="12">${escapeHtml(withYear[2])}</tspan>
+              </text>
+            `;
+          } else {
+            const parts = weeklyLabel.split(' - ');
+            if (parts.length === 2) {
+              axisLabel = `
+                <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#64748b">
+                  <tspan x="${point.x}" dy="0">${escapeHtml(parts[0])}</tspan>
+                  <tspan x="${point.x}" dy="12">${escapeHtml('- ' + parts[1])}</tspan>
+                </text>
+              `;
+            }
+          }
+        }
+
+        return `
+          <circle cx="${point.x}" cy="${point.y}" r="5" fill="#2563eb"></circle>
+          ${axisLabel}
+          <text x="${point.x}" y="${point.y - 12}" text-anchor="middle" font-size="12" fill="#1d4ed8">${escapeHtml(formatDuration(point.value))}</text>
+        `;
+      }).join('');
+
+      const titleMap = {
+        daily: '日ごとの睡眠時間',
+        weekly: '週ごとの平均睡眠時間',
+        monthly: '月ごとの平均睡眠時間'
+      };
+
+      graphContainer.innerHTML = `
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="mb-3 text-sm font-semibold text-blue-800">${titleMap[mode] || '睡眠時間（折れ線グラフ）'}</div>
+          <div class="flex gap-0">
+            <div class="shrink-0" style="width:${axisWidth}px;">
+              <svg viewBox="0 0 ${axisWidth} ${height}" class="block w-full h-[300px] sm:h-[340px]">
+                ${yAxisLabels}
+              </svg>
+            </div>
+            <div id="graph-scroll-area" class="overflow-x-auto pb-2 flex-1">
+              <div style="width:${width}px;min-width:${width}px;">
+                <svg viewBox="0 0 ${width} ${height}" class="block w-full h-[300px] sm:h-[340px]">
+                  <rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>
+                  ${yGridLines}
+                  <path d="${path}" fill="none" stroke="#2563eb" stroke-width="3"></path>
+                  ${pointsMarkup}
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const focusIndex = getGraphFocusIndex(summaryRows, mode);
+      requestAnimationFrame(() => {
+        centerGraphOnIndex(focusIndex, pointList);
+      });
+    }
+
+    function buildGraphSeries(rows, mode) {
+      const dailySeries = calculateDailySleepSummary(rows);
+      if (mode === 'daily') {
+        let lastYear = '';
+        let lastMonth = '';
+        return dailySeries.map(item => {
+          const [year, month, day] = item.date.split('-');
+          let label = day;
+          if (month !== lastMonth) {
+            label = `${month}-${day}`;
+            lastMonth = month;
+          }
+          if (year !== lastYear) {
+            label = `${year}-${month}-${day}`;
+            lastYear = year;
+            lastMonth = month;
+          }
+          return { key: item.date, label, value: item.totalMinutes };
+        });
+      }
+
+      if (mode === 'weekly') {
+        const buckets = new Map();
+        dailySeries.forEach(item => {
+          const date = new Date(`${item.date}T00:00:00`);
+          const weekStart = new Date(date);
+          const day = weekStart.getDay();
+          weekStart.setDate(date.getDate() - day);
+          const key = formatDateLocal(weekStart);
+          const existing = buckets.get(key) || { label: buildWeekRangeLabel(key), total: 0, count: 0 };
+          existing.total += item.totalMinutes;
+          existing.count += 1;
+          buckets.set(key, existing);
+        });
+        const weeklyRows = Array.from(buckets.entries())
+          .map(([key, bucket]) => {
+            const startDate = key;
+            const start = new Date(`${startDate}T00:00:00`);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            return {
+              key,
+              startDate,
+              endDate: formatDateLocal(end),
+              value: bucket.count ? Math.round(bucket.total / bucket.count) : 0
+            };
+          })
+          .sort((a, b) => a.key.localeCompare(b.key));
+
+        let lastYear = '';
+        return weeklyRows.map(item => {
+          const [startY, startM, startD] = item.startDate.split('-');
+          const [endY, endM, endD] = item.endDate.split('-');
+          const sameMonth = startY === endY && startM === endM;
+          const rangeLabel = sameMonth
+            ? `${startM}-${startD} - ${endD}`
+            : `${startM}-${startD} - ${endM}-${endD}`;
+          const displayYear = endY;
+          const label = displayYear !== lastYear ? `${displayYear}-${rangeLabel}` : rangeLabel;
+          lastYear = displayYear;
+          return { ...item, label };
+        });
+      }
+
+      const buckets = new Map();
+      dailySeries.forEach(item => {
+        const monthKey = item.date.slice(0, 7);
+        const existing = buckets.get(monthKey) || { total: 0, count: 0 };
+        existing.total += item.totalMinutes;
+        existing.count += 1;
+        buckets.set(monthKey, existing);
+      });
+
+      const monthlyRows = Array.from(buckets.entries())
+        .map(([key, value]) => ({ key, value: value.count ? Math.round(value.total / value.count) : 0 }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+
+      let lastYear = '';
+      return monthlyRows.map(item => {
+        const [year, month] = item.key.split('-');
+        const label = year !== lastYear ? `${year}-${month}` : month;
+        lastYear = year;
+        return { ...item, label };
+      });
+    }
+
+    function formatChartHours(minutes) {
+      return `${Math.round(minutes / 60)}h`;
     }
 
     function formatValue(value) {

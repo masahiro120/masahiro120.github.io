@@ -133,3 +133,24 @@ body {
 .back-button:hover {
   background: #f8fafc;
 }
+
+.back-button-inline {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .section-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .back-button-inline {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}

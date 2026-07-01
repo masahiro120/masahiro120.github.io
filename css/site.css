@@ -166,6 +166,20 @@ body {
   flex-shrink: 0;
 }
 
+.sleep-page {
+  overflow-x: hidden;
+}
+
+.sleep-page .main-container {
+  width: 100%;
+}
+
+.sleep-page .page-card {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media (max-width: 640px) {
   .main-container {
     padding: 1rem 0.75rem;
@@ -193,5 +207,9 @@ body {
   .section-title.section-title-inline .back-button-inline {
     margin-left: 0.5rem;
     align-self: auto;
+  }
+
+  .sleep-page .page-card {
+    max-width: 430px;
   }
 }

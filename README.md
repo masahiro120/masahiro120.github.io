@@ -71,6 +71,14 @@ python3 -m http.server 8000
 
 - http://localhost:8000/index.html
 
+## 外部公開（cloudflared）
+
+ローカルサーバーを外部に公開する場合は、以下のコマンドを実行します。
+
+```bash
+cloudflared tunnel --url http://localhost:8000
+```
+
 ## 補足
 
 - 一部に `.DS_Store` などの macOS 生成ファイルが含まれます。

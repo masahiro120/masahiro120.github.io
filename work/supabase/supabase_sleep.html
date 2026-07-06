@@ -9,6 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="/css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
@@ -28,7 +29,7 @@
           <div id="status" class="text-sm text-slate-600"></div>
 
           <div class="w-full rounded-3xl bg-slate-900/70 p-1">
-            <div class="grid grid-cols-2 gap-1">
+            <div class="grid grid-cols-2 gap-1" data-segment-group="view">
               <button id="tab-table" data-tab="table" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Table</button>
               <button id="tab-graph" data-tab="graph" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Graph</button>
             </div>
@@ -36,7 +37,7 @@
 
           <div id="table-view">
             <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
-              <div class="grid grid-cols-3 gap-1">
+              <div class="grid grid-cols-3 gap-1" data-segment-group="table-range">
                 <button id="table-range-day" data-range="day" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
                 <button id="table-range-week" data-range="week" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
                 <button id="table-range-month" data-range="month" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Month</button>
@@ -89,7 +90,7 @@
           </div>
           <div id="graph-view" class="hidden">
             <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
-              <div class="grid grid-cols-3 gap-1">
+              <div class="grid grid-cols-3 gap-1" data-segment-group="graph-range">
                 <button id="graph-daily" data-graph-view="daily" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
                 <button id="graph-weekly" data-graph-view="weekly" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
                 <button id="graph-monthly" data-graph-view="monthly" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Month</button>
@@ -147,30 +148,94 @@
     let activeTableRange = 'day';
     let isDetailVisible = false;
     let includeNapInSleep = true;
+    const motionAnimate = window.Motion && typeof window.Motion.animate === 'function' ? window.Motion.animate : null;
+    const segmentGroups = new Map();
 
     document.addEventListener('DOMContentLoaded', () => {
       bindEvents();
       loadTable();
     });
 
-    function updateRangeButtonStyles() {
-      rangeButtons.forEach(button => {
-        const isActive = button.getAttribute('data-range') === activeTableRange;
-        button.classList.toggle('bg-blue-600', isActive);
-        button.classList.toggle('text-white', isActive);
-        button.classList.toggle('bg-slate-200', !isActive);
-        button.classList.toggle('text-slate-700', !isActive);
+    function ensureSegmentGroup(groupName, buttons) {
+      if (segmentGroups.has(groupName)) return segmentGroups.get(groupName);
+
+      const group = document.querySelector(`[data-segment-group="${groupName}"]`) || buttons?.[0]?.parentElement;
+      if (!group) return null;
+
+      group.classList.add('relative');
+
+      let indicator = group.querySelector('.segment-indicator');
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'segment-indicator';
+        indicator.style.position = 'absolute';
+        indicator.style.top = '0';
+        indicator.style.left = '0';
+        indicator.style.height = '100%';
+        indicator.style.width = '0px';
+        indicator.style.borderRadius = '1rem';
+        indicator.style.background = '#2563eb';
+        indicator.style.pointerEvents = 'none';
+        indicator.style.zIndex = '0';
+        group.prepend(indicator);
+      }
+
+      buttons.forEach(button => {
+        button.classList.remove('bg-blue-600', 'bg-slate-200');
+        button.classList.add('bg-transparent', 'relative', 'z-10');
       });
+
+      const payload = { group, indicator };
+      segmentGroups.set(groupName, payload);
+      return payload;
     }
 
-    function updateGraphModeButtonStyles() {
-      graphModeButtons.forEach(button => {
-        const isActive = button.getAttribute('data-graph-view') === activeGraphView;
-        button.classList.toggle('bg-blue-600', isActive);
+    function moveSegmentIndicator(groupName, activeButton, options = {}) {
+      const segment = segmentGroups.get(groupName);
+      if (!segment || !activeButton) return;
+      const animate = options.animate !== false;
+
+      const targetX = activeButton.offsetLeft;
+      const targetWidth = activeButton.offsetWidth;
+
+      if (motionAnimate && animate) {
+        motionAnimate(
+          segment.indicator,
+          { x: targetX, width: targetWidth },
+          { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+        );
+      } else {
+        segment.indicator.style.transform = `translateX(${targetX}px)`;
+        segment.indicator.style.width = `${targetWidth}px`;
+      }
+    }
+
+    function updateSegmentGroupStyles(buttons, groupName, isActiveFn, options = {}) {
+      ensureSegmentGroup(groupName, buttons);
+
+      let activeButton = null;
+      buttons.forEach(button => {
+        const isActive = isActiveFn(button);
         button.classList.toggle('text-white', isActive);
-        button.classList.toggle('bg-slate-200', !isActive);
         button.classList.toggle('text-slate-700', !isActive);
+        if (isActive) activeButton = button;
       });
+
+      moveSegmentIndicator(groupName, activeButton, options);
+    }
+
+    function updateRangeButtonStyles(animate = true) {
+      updateSegmentGroupStyles(rangeButtons, 'table-range', button => button.getAttribute('data-range') === activeTableRange, { animate });
+    }
+
+    function updateGraphModeButtonStyles(animate = true) {
+      updateSegmentGroupStyles(graphModeButtons, 'graph-range', button => button.getAttribute('data-graph-view') === activeGraphView, { animate });
+    }
+
+    function refreshSegmentIndicators(animate = false) {
+      updateRangeButtonStyles(animate);
+      updateGraphModeButtonStyles(animate);
+      updateSegmentGroupStyles(tabButtons, 'view', button => button.getAttribute('data-tab') === activeView, { animate });
     }
 
     function toGraphView(tableRange) {
@@ -190,6 +255,16 @@
       detailToggleBtn.classList.toggle('text-white', isDetailVisible);
       detailToggleBtn.classList.toggle('bg-slate-200', !isDetailVisible);
       detailToggleBtn.classList.toggle('text-slate-700', !isDetailVisible);
+
+      if (!motionAnimate) return;
+      motionAnimate(
+        detailToggleBtn,
+        {
+          backgroundColor: isDetailVisible ? '#2563eb' : '#e2e8f0',
+          color: isDetailVisible ? '#ffffff' : '#334155'
+        },
+        { duration: 0.24, ease: 'ease-out' }
+      );
     }
 
     function syncIncludeNapToggleUI() {
@@ -263,9 +338,23 @@
         });
       });
       tableContainer.addEventListener('click', handleTableClick);
-      updateRangeButtonStyles();
-      updateGraphModeButtonStyles();
+      refreshSegmentIndicators(false);
       syncIncludeNapToggleUI();
+
+      // 初期描画直後は座標計算がずれることがあるため、表示確定後に再計算する
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          refreshSegmentIndicators(false);
+        });
+      });
+
+      window.addEventListener('load', () => {
+        refreshSegmentIndicators(false);
+      }, { once: true });
+
+      window.addEventListener('resize', () => {
+        refreshSegmentIndicators(false);
+      });
     }
 
     async function loadTable() {
@@ -433,10 +522,15 @@
 
       tabButtons.forEach(button => {
         const isActive = button.getAttribute('data-tab') === view;
-        button.classList.toggle('bg-blue-600', isActive);
         button.classList.toggle('text-white', isActive);
-        button.classList.toggle('bg-slate-200', !isActive);
         button.classList.toggle('text-slate-700', !isActive);
+      });
+      moveSegmentIndicator('view', Array.from(tabButtons).find(button => button.getAttribute('data-tab') === view));
+
+      // 非表示タブは初期計算時に幅0になりやすいため、表示切替直後に再配置する
+      requestAnimationFrame(() => {
+        updateRangeButtonStyles(false);
+        updateGraphModeButtonStyles(false);
       });
 
       if (view === 'graph') {

@@ -142,11 +142,14 @@ body {
   position: fixed;
   top: 1.25rem;
   right: 1.25rem;
-  font-size: 1rem;
-  padding: 0.65rem 1rem;
-  background: rgba(248, 250, 252, 0.92);
-  color: #0f172a;
-  border-radius: 0.75rem;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25rem !important;
+  font-family: inherit !important;
+  padding: 0.5rem 1rem;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 0.5rem;
   border: 1px solid rgba(15, 23, 42, 0.12);
   text-decoration: none;
   z-index: 1000;
@@ -154,7 +157,7 @@ body {
 
 #back-button:hover,
 .back-button:hover {
-  background: #f8fafc;
+  background: #cbd5e1;
 }
 
 .back-button-inline {
@@ -164,6 +167,9 @@ body {
   z-index: auto;
   margin-left: auto;
   flex-shrink: 0;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25rem !important;
 }
 
 .sleep-page {

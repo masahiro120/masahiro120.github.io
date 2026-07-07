@@ -175,6 +175,10 @@
       return Number.isNaN(date.getTime()) ? null : date;
     }
 
+    function formatDateDisplay(date) {
+      return formatDate(date).replace(/-/g, "/");
+    }
+
     function addYearsMonths(baseDate, years, months) {
       const date = new Date(baseDate.getTime());
       const totalMonths = years * 12 + months;
@@ -389,8 +393,8 @@
         percent,
         totalDays,
         remainingDays,
-        startText: formatDate(start),
-        endText: formatDate(end)
+        startText: formatDateDisplay(start),
+        endText: formatDateDisplay(end)
       };
     }
 

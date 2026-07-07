@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>歯科矯正進捗</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body">
+        <div class="section-title section-title-inline">
+          <h1 class="hero-title" style="font-size: clamp(2rem, 6vw, 2.8rem);">歯科矯正進捗</h1>
+          <a href="/index.html" class="back-button back-button-inline">← 戻る</a>
+        </div>
+
+        <div class="space-y-6">
+          <div class="flex justify-center">
+            <div class="relative h-64 w-64">
+              <svg viewBox="0 0 220 220" class="h-full w-full">
+                <circle cx="110" cy="110" r="86" fill="none" stroke="#1e293b" stroke-width="22"></circle>
+                <circle
+                  id="progress-ring"
+                  cx="110"
+                  cy="110"
+                  r="86"
+                  fill="none"
+                  stroke="#3b82f6"
+                  stroke-width="22"
+                  stroke-linecap="round"
+                  transform="rotate(-90 110 110)"
+                ></circle>
+              </svg>
+              <div class="pointer-events-none absolute inset-0 text-center">
+                <p
+                  id="progress-value"
+                  class="absolute inset-0 flex items-center justify-center text-4xl font-black leading-none tracking-tight text-white sm:text-5xl"
+                >0%</p>
+                <p class="absolute inset-x-0 top-[60%] text-sm font-semibold text-slate-300">進捗</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-200">
+            <div class="grid gap-2 md:grid-cols-2">
+              <p>開始日: <span id="summary-start" class="font-semibold text-white">-</span></p>
+              <p>終了日: <span id="summary-end" class="font-semibold text-white">-</span></p>
+              <p>総日数: <span id="summary-total-days" class="font-semibold text-white">-</span></p>
+              <p>残り日数: <span id="summary-remaining-days" class="font-semibold text-white">-</span></p>
+            </div>
+          </div>
+
+          <button id="edit-toggle-btn" class="w-full rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">編集</button>
+
+          <div id="edit-panel" class="hidden rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-slate-100">
+            <div class="mb-4 grid gap-2 md:grid-cols-2">
+              <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/70 p-3 text-sm">
+                <input id="mode-end-date" type="radio" name="calc-mode" value="endDate" class="radio radio-primary radio-sm" checked>
+                <span>終了日を指定</span>
+              </label>
+              <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/70 p-3 text-sm">
+                <input id="mode-duration" type="radio" name="calc-mode" value="duration" class="radio radio-primary radio-sm">
+                <span>期間を指定</span>
+              </label>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-200">開始日</label>
+                <input id="field-start-date" type="date" class="input input-bordered w-full bg-slate-100 text-slate-900" />
+              </div>
+
+              <div id="end-date-container">
+                <label class="mb-2 block text-sm font-semibold text-slate-200">終了日</label>
+                <input id="field-end-date" type="date" class="input input-bordered w-full bg-slate-100 text-slate-900" />
+              </div>
+
+              <div id="duration-container" class="hidden">
+                <label class="mb-2 block text-sm font-semibold text-slate-200">期間</label>
+                <div class="grid w-full grid-cols-2 gap-3">
+                  <div class="flex items-center gap-2">
+                    <input id="field-years" type="number" min="0" step="1" class="input input-bordered w-full bg-slate-100 text-slate-900" placeholder="0" />
+                    <span class="shrink-0 text-sm font-semibold text-slate-200">年</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <input id="field-months" type="number" min="0" step="1" class="input input-bordered w-full bg-slate-100 text-slate-900" placeholder="0" />
+                    <span class="shrink-0 text-sm font-semibold text-slate-200">ヶ月</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid gap-2 md:grid-cols-2">
+              <button id="save-settings-btn" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">保存</button>
+              <button id="cancel-settings-btn" class="w-full rounded-lg bg-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-400">キャンセル</button>
+            </div>
+
+            <p id="settings-error" class="mt-3 hidden text-sm text-rose-300"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+    const TABLE_NAME = "orthodontics";
+    const DEFAULT_RECORD_ID = 1;
+
+    const supabaseClient = window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+    const progressRing = document.getElementById("progress-ring");
+    const progressValue = document.getElementById("progress-value");
+    const editToggleBtn = document.getElementById("edit-toggle-btn");
+    const editPanel = document.getElementById("edit-panel");
+    const saveSettingsBtn = document.getElementById("save-settings-btn");
+    const cancelSettingsBtn = document.getElementById("cancel-settings-btn");
+    const settingsError = document.getElementById("settings-error");
+
+    const modeEndDate = document.getElementById("mode-end-date");
+    const modeDuration = document.getElementById("mode-duration");
+    const fieldStartDate = document.getElementById("field-start-date");
+    const fieldEndDate = document.getElementById("field-end-date");
+    const fieldYears = document.getElementById("field-years");
+    const fieldMonths = document.getElementById("field-months");
+    const endDateContainer = document.getElementById("end-date-container");
+    const durationContainer = document.getElementById("duration-container");
+
+    const summaryStart = document.getElementById("summary-start");
+    const summaryEnd = document.getElementById("summary-end");
+    const summaryTotalDays = document.getElementById("summary-total-days");
+    const summaryRemainingDays = document.getElementById("summary-remaining-days");
+
+    const radius = 86;
+    const circumference = 2 * Math.PI * radius;
+    progressRing.style.strokeDasharray = `${circumference}`;
+    progressRing.style.strokeDashoffset = `${circumference}`;
+
+    let currentSettings = null;
+    let currentRecordId = DEFAULT_RECORD_ID;
+    let progressAnimationFrame = null;
+    let progressAnimationToken = 0;
+
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseDate(value) {
+      if (!value) return null;
+      const date = new Date(`${value}T00:00:00`);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function addYearsMonths(baseDate, years, months) {
+      const date = new Date(baseDate.getTime());
+      const totalMonths = years * 12 + months;
+      const baseDay = date.getDate();
+      date.setMonth(date.getMonth() + totalMonths);
+      if (date.getDate() < baseDay) {
+        date.setDate(0);
+      }
+      return date;
+    }
+
+    function dayDiff(startDate, endDate) {
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const diff = end.getTime() - start.getTime();
+      return Math.floor(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function showError(message) {
+      settingsError.textContent = message;
+      settingsError.classList.remove("hidden");
+    }
+
+    function clearError() {
+      settingsError.textContent = "";
+      settingsError.classList.add("hidden");
+    }
+
+    function getDefaultSettings() {
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      return {
+        mode: "duration",
+        startDate: formatDate(startDate),
+        endDate: "",
+        years: 2,
+        months: 0
+      };
+    }
+
+    function mapRowToSettings(row) {
+      const years = Number(row?.["term-year"] ?? 0);
+      const months = Number(row?.["term-month"] ?? 0);
+      const normalizedYears = Number.isFinite(years) ? Math.max(0, years) : 0;
+      const normalizedMonths = Number.isFinite(months) ? Math.max(0, months) : 0;
+
+      return {
+        mode: (normalizedYears > 0 || normalizedMonths > 0) ? "duration" : "endDate",
+        startDate: row?.start || "",
+        endDate: row?.end || "",
+        years: normalizedYears,
+        months: normalizedMonths
+      };
+    }
+
+    async function loadSettingsFromSupabase() {
+      if (!supabaseClient) {
+        throw new Error("Supabase client を初期化できませんでした。");
+      }
+
+      const { data, error } = await supabaseClient
+        .from(TABLE_NAME)
+        .select("*")
+        .order("id", { ascending: true })
+        .limit(1);
+
+      if (error) {
+        throw new Error(error.message || "設定の取得に失敗しました。");
+      }
+
+      if (!data || !data.length) {
+        const fallback = getDefaultSettings();
+        const { data: inserted, error: insertError } = await supabaseClient
+          .from(TABLE_NAME)
+          .insert([{
+            id: DEFAULT_RECORD_ID,
+            start: fallback.startDate,
+            end: addYearsMonths(parseDate(fallback.startDate), fallback.years, fallback.months).toISOString().slice(0, 10),
+            "term-year": fallback.years,
+            "term-month": fallback.months
+          }])
+          .select()
+          .limit(1);
+
+        if (insertError) {
+          throw new Error(insertError.message || "初期設定の作成に失敗しました。");
+        }
+
+        const row = inserted && inserted[0];
+        currentRecordId = row?.id ?? DEFAULT_RECORD_ID;
+        return mapRowToSettings(row);
+      }
+
+      const row = data[0];
+      currentRecordId = row?.id ?? DEFAULT_RECORD_ID;
+      return mapRowToSettings(row);
+    }
+
+    function monthsBetween(startDate, endDate) {
+      let months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+      if (endDate.getDate() < startDate.getDate()) {
+        months -= 1;
+      }
+      return Math.max(0, months);
+    }
+
+    async function saveSettingsToSupabase(settings) {
+      if (!supabaseClient) {
+        throw new Error("Supabase client を初期化できませんでした。");
+      }
+
+      const resolved = validateAndResolveDates(settings);
+      if (resolved.error) {
+        throw new Error(resolved.error);
+      }
+
+      let termYears = Math.max(0, Math.floor(Number(settings.years || 0)));
+      let termMonths = Math.max(0, Math.floor(Number(settings.months || 0)));
+
+      if (settings.mode === "endDate") {
+        const totalMonths = monthsBetween(resolved.start, resolved.end);
+        termYears = Math.floor(totalMonths / 12);
+        termMonths = totalMonths % 12;
+      }
+
+      const payload = {
+        id: currentRecordId || DEFAULT_RECORD_ID,
+        start: formatDate(resolved.start),
+        end: formatDate(resolved.end),
+        "term-year": termYears,
+        "term-month": termMonths
+      };
+
+      const { data, error } = await supabaseClient
+        .from(TABLE_NAME)
+        .upsert([payload], { onConflict: "id" })
+        .select()
+        .limit(1);
+
+      if (error) {
+        throw new Error(error.message || "保存に失敗しました。");
+      }
+
+      const saved = data && data[0] ? data[0] : payload;
+      currentRecordId = saved.id ?? currentRecordId ?? DEFAULT_RECORD_ID;
+      return mapRowToSettings(saved);
+    }
+
+    function toggleModeView(mode) {
+      const useDuration = mode === "duration";
+      endDateContainer.classList.toggle("hidden", useDuration);
+      durationContainer.classList.toggle("hidden", !useDuration);
+    }
+
+    function applySettingsToForm(settings) {
+      modeEndDate.checked = settings.mode === "endDate";
+      modeDuration.checked = settings.mode === "duration";
+      fieldStartDate.value = settings.startDate || "";
+      fieldEndDate.value = settings.endDate || "";
+      fieldYears.value = settings.years ?? 0;
+      fieldMonths.value = settings.months ?? 0;
+      toggleModeView(settings.mode);
+      clearError();
+    }
+
+    function readSettingsFromForm() {
+      return {
+        mode: modeDuration.checked ? "duration" : "endDate",
+        startDate: fieldStartDate.value,
+        endDate: fieldEndDate.value,
+        years: Number(fieldYears.value || 0),
+        months: Number(fieldMonths.value || 0)
+      };
+    }
+
+    function validateAndResolveDates(settings) {
+      const start = parseDate(settings.startDate);
+      if (!start) {
+        return { error: "開始日を入力してください。" };
+      }
+
+      if (settings.mode === "endDate") {
+        const end = parseDate(settings.endDate);
+        if (!end) return { error: "終了日を入力してください。" };
+        if (end.getTime() <= start.getTime()) {
+          return { error: "終了日は開始日より後の日付を指定してください。" };
+        }
+        return { start, end };
+      }
+
+      const years = Math.max(0, Number.isFinite(settings.years) ? Math.floor(settings.years) : 0);
+      const months = Math.max(0, Number.isFinite(settings.months) ? Math.floor(settings.months) : 0);
+      if (years === 0 && months === 0) {
+        return { error: "期間は1か月以上を指定してください。" };
+      }
+
+      const end = addYearsMonths(start, years, months);
+      if (end.getTime() <= start.getTime()) {
+        return { error: "終了日を計算できませんでした。" };
+      }
+      return { start, end };
+    }
+
+    function computeProgress(start, end, now) {
+      const totalDays = Math.max(1, dayDiff(start, end));
+      const elapsedDaysRaw = dayDiff(start, now);
+      const elapsedDays = Math.min(totalDays, Math.max(0, elapsedDaysRaw));
+      const remainingDays = Math.max(0, totalDays - elapsedDays);
+      const percent = Math.round((elapsedDays / totalDays) * 100);
+      return {
+        percent,
+        totalDays,
+        remainingDays,
+        startText: formatDate(start),
+        endText: formatDate(end)
+      };
+    }
+
+    function setRingProgress(percent) {
+      const bounded = Math.max(0, Math.min(100, percent));
+      const offset = circumference * (1 - bounded / 100);
+      progressRing.style.strokeDashoffset = `${offset}`;
+      progressValue.textContent = `${bounded}%`;
+    }
+
+    function stopProgressAnimation() {
+      progressAnimationToken += 1;
+      if (progressAnimationFrame !== null) {
+        cancelAnimationFrame(progressAnimationFrame);
+        progressAnimationFrame = null;
+      }
+    }
+
+    function animateProgress(targetPercent) {
+      stopProgressAnimation();
+      const token = progressAnimationToken;
+      const boundedTarget = Math.max(0, Math.min(100, targetPercent));
+      const duration = 1400;
+      const startTime = performance.now();
+
+      function step(now) {
+        if (token !== progressAnimationToken) return;
+        const elapsed = now - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const value = Math.round(boundedTarget * eased);
+        setRingProgress(value);
+        if (t < 1) {
+          progressAnimationFrame = requestAnimationFrame(step);
+        } else {
+          progressAnimationFrame = null;
+        }
+      }
+
+      setRingProgress(0);
+      progressAnimationFrame = requestAnimationFrame(step);
+    }
+
+    function renderSummary(info) {
+      summaryStart.textContent = info.startText;
+      summaryEnd.textContent = info.endText;
+      summaryTotalDays.textContent = `${info.totalDays}日`;
+      summaryRemainingDays.textContent = `${info.remainingDays}日`;
+    }
+
+    function recalculateAndRender(animate) {
+      const resolved = validateAndResolveDates(currentSettings);
+      if (resolved.error) {
+        showError(resolved.error);
+        setRingProgress(0);
+        summaryStart.textContent = "-";
+        summaryEnd.textContent = "-";
+        summaryTotalDays.textContent = "-";
+        summaryRemainingDays.textContent = "-";
+        return;
+      }
+
+      clearError();
+      const today = new Date();
+      const progress = computeProgress(resolved.start, resolved.end, today);
+      renderSummary(progress);
+      if (animate) {
+        animateProgress(progress.percent);
+      } else {
+        stopProgressAnimation();
+        setRingProgress(progress.percent);
+      }
+    }
+
+    function bindEvents() {
+      editToggleBtn.addEventListener("click", () => {
+        const willOpen = editPanel.classList.contains("hidden");
+        if (willOpen) {
+          applySettingsToForm(currentSettings);
+        }
+        editPanel.classList.toggle("hidden", !willOpen);
+        editToggleBtn.classList.toggle("bg-blue-600", willOpen);
+        editToggleBtn.classList.toggle("text-white", willOpen);
+        editToggleBtn.classList.toggle("bg-slate-200", !willOpen);
+        editToggleBtn.classList.toggle("text-slate-700", !willOpen);
+        editToggleBtn.textContent = willOpen ? "編集を閉じる" : "編集";
+      });
+
+      [modeEndDate, modeDuration].forEach(input => {
+        input.addEventListener("change", () => {
+          toggleModeView(modeDuration.checked ? "duration" : "endDate");
+        });
+      });
+
+      saveSettingsBtn.addEventListener("click", async () => {
+        const draft = readSettingsFromForm();
+        draft.years = Math.max(0, Math.floor(draft.years || 0));
+        draft.months = Math.max(0, Math.floor(draft.months || 0));
+
+        const resolved = validateAndResolveDates(draft);
+        if (resolved.error) {
+          showError(resolved.error);
+          return;
+        }
+
+        try {
+          clearError();
+          currentSettings = await saveSettingsToSupabase(draft);
+          applySettingsToForm(currentSettings);
+          recalculateAndRender(true);
+        } catch (error) {
+          showError(`Supabase保存失敗: ${error.message || error}`);
+        }
+      });
+
+      cancelSettingsBtn.addEventListener("click", () => {
+        applySettingsToForm(currentSettings);
+      });
+    }
+
+    async function initialize() {
+      currentSettings = getDefaultSettings();
+      applySettingsToForm(currentSettings);
+      recalculateAndRender(false);
+      bindEvents();
+
+      try {
+        currentSettings = await loadSettingsFromSupabase();
+        applySettingsToForm(currentSettings);
+        recalculateAndRender(true);
+      } catch (error) {
+        showError(`Supabase読み込み失敗: ${error.message || error}`);
+        recalculateAndRender(true);
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initialize, { once: true });
+    } else {
+      initialize();
+    }
+  </script>
+</body>
+
+</html>

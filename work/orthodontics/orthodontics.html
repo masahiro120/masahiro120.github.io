@@ -203,14 +203,15 @@
       };
     }
 
-    function mapRowToSettings(row) {
+    function mapRowToSettings(row, preferredMode = null) {
       const years = Number(row?.["term-year"] ?? 0);
       const months = Number(row?.["term-month"] ?? 0);
       const normalizedYears = Number.isFinite(years) ? Math.max(0, years) : 0;
       const normalizedMonths = Number.isFinite(months) ? Math.max(0, months) : 0;
+      const inferredMode = (normalizedYears > 0 || normalizedMonths > 0) ? "duration" : "endDate";
 
       return {
-        mode: (normalizedYears > 0 || normalizedMonths > 0) ? "duration" : "endDate",
+        mode: preferredMode || inferredMode,
         startDate: row?.start || "",
         endDate: row?.end || "",
         years: normalizedYears,
@@ -308,7 +309,7 @@
 
       const saved = data && data[0] ? data[0] : payload;
       currentRecordId = saved.id ?? currentRecordId ?? DEFAULT_RECORD_ID;
-      return mapRowToSettings(saved);
+      return mapRowToSettings(saved, settings.mode);
     }
 
     function toggleModeView(mode) {

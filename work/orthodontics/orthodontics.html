@@ -50,10 +50,22 @@
 
           <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-200">
             <div class="grid gap-2 md:grid-cols-2">
-              <p>開始日: <span id="summary-start" class="font-semibold text-white">-</span></p>
-              <p>終了日: <span id="summary-end" class="font-semibold text-white">-</span></p>
-              <p>総日数: <span id="summary-total-days" class="font-semibold text-white">-</span></p>
-              <p>残り日数: <span id="summary-remaining-days" class="font-semibold text-white">-</span></p>
+              <p>
+                <span class="inline-block w-[5.5em]">開始日:</span>
+                <span id="summary-start" class="font-semibold text-white">-</span>
+              </p>
+              <p>
+                <span class="inline-block w-[5.5em]">終了日:</span>
+                <span id="summary-end" class="font-semibold text-white">-</span>
+              </p>
+              <p>
+                <span class="inline-block w-[5.5em]">総日数:</span>
+                <span id="summary-total-days" class="font-semibold text-white">-</span>
+              </p>
+              <p>
+                <span class="inline-block w-[5.5em]">残り日数:</span>
+                <span id="summary-remaining-days" class="font-semibold text-white">-</span>
+              </p>
             </div>
           </div>
 
@@ -425,8 +437,8 @@
     function renderSummary(info) {
       summaryStart.textContent = info.startText;
       summaryEnd.textContent = info.endText;
-      summaryTotalDays.textContent = `${info.totalDays}日`;
-      summaryRemainingDays.textContent = `${info.remainingDays}日`;
+      summaryTotalDays.textContent = `${info.totalDays}日（${fieldYears.value || 0}年 ${fieldMonths.value || 0}ヶ月）`;
+      summaryRemainingDays.textContent = `${info.remainingDays}日（${Math.floor(info.remainingDays / 365)}年 ${Math.floor((info.remainingDays % 365) / 30)}ヶ月）`;
     }
 
     function recalculateAndRender(animate) {

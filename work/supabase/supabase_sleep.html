@@ -80,7 +80,7 @@
                   <button id="cancel-btn" class="w-full bg-slate-300 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-400">キャンセル</button>
                 </div>
               </div>
-              <div id="table-container" class="max-w-full overflow-x-auto"></div>
+              <div id="table-container" class="max-w-full"></div>
             </div>
           </div>
           <div id="graph-view" class="hidden">
@@ -618,12 +618,14 @@
 
       tableContainer.innerHTML = `
         <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+          <div class="max-w-full overflow-x-auto">
           <table class="table table-sm min-w-max">
             <thead>
               <tr>${header}</tr>
             </thead>
             <tbody>${body}</tbody>
           </table>
+          </div>
         </div>
       `;
     }
@@ -782,13 +784,14 @@
 
       const topPadding = 24;
         const bottomPadding = mode === 'weekly' ? 88 : 70;
-      const sidePadding = 10;
-        const pointGap = mode === 'monthly' ? 85 : mode === 'weekly' ? 100 : 65;
+      const sidePadding = 18;
+        const pointGap = mode === 'monthly' ? 68 : mode === 'weekly' ? 82 : 52;
       const height = 420;
-      const axisWidth = 44;
+      const axisWidth = 34;
       const dataWidth = sidePadding * 2 + Math.max(summaryRows.length - 1, 1) * pointGap;
-      const viewportWidth = Math.max(320, graphContainer.clientWidth - axisWidth - 32);
+      const viewportWidth = Math.max(220, graphContainer.clientWidth - axisWidth);
       const width = Math.max(viewportWidth, dataWidth);
+      const graphBg = "#071126";
       const maxValue = Math.max(...summaryRows.map(item => item.value), 1);
       const stepX = (width - sidePadding * 2) / Math.max(summaryRows.length - 1, 1);
       const pointList = summaryRows.map((item, index) => {
@@ -804,7 +807,7 @@
       }).join('');
       const yGridLines = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
         const y = height - bottomPadding - ratio * (height - topPadding - bottomPadding);
-        return `<line x1="${sidePadding}" y1="${y}" x2="${width - sidePadding}" y2="${y}" stroke="rgba(148, 163, 184, 0.25)" stroke-dasharray="4 4"></line>`;
+        return `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(148, 163, 184, 0.28)" stroke-dasharray="4 4"></line>`;
       }).join('');
       const pointsMarkup = pointList.map(point => {
         let axisLabel = `<text x="${point.x}" y="${height - 18}" text-anchor="middle" font-size="12" fill="#cbd5e1">${escapeHtml(point.label)}</text>`;
@@ -848,16 +851,17 @@
       graphContainer.innerHTML = `
         <div>
           <h2 class="mb-3 text-lg font-bold text-white">${titleMap[mode] || '睡眠時間（折れ線グラフ）'}</h2>
-          <div class="flex min-w-0 gap-0">
-            <div class="shrink-0" style="width:${axisWidth}px;">
+          <div class="flex min-w-0 gap-0 overflow-hidden rounded-xl" style="background:${graphBg};">
+            <div class="shrink-0" style="width:${axisWidth}px;background:${graphBg};">
               <svg viewBox="0 0 ${axisWidth} ${height}" class="block w-full h-[300px] sm:h-[340px]">
+                <rect x="0" y="0" width="${axisWidth}" height="${height}" fill="${graphBg}"></rect>
                 ${yAxisLabels}
               </svg>
             </div>
             <div id="graph-scroll-area" class="min-w-0 overflow-x-auto pb-2 flex-1">
               <div style="width:${width}px;min-width:${width}px;">
-                <svg viewBox="0 0 ${width} ${height}" class="block w-full h-[300px] sm:h-[340px]">
-                  <rect x="0" y="0" width="${width}" height="${height}" fill="#0f172a"></rect>
+                <svg viewBox="0 0 ${width} ${height}" class="block h-[300px] sm:h-[340px]" style="width:${width}px;">
+                  <rect x="0" y="0" width="${width}" height="${height}" fill="${graphBg}"></rect>
                   ${yGridLines}
                   <path d="${path}" fill="none" stroke="#38bdf8" stroke-width="3"></path>
                   ${pointsMarkup}

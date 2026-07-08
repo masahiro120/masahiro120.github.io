@@ -23,12 +23,7 @@
         </div>
 
         <div class="space-y-6">
-
-
-
-          <div id="status" class="text-sm text-slate-600"></div>
-
-          <div class="w-full rounded-3xl bg-slate-900/70 p-1">
+          <div class="w-full rounded-xl bg-slate-900/70 p-1">
             <div class="grid grid-cols-2 gap-1" data-segment-group="view">
               <button id="tab-table" data-tab="table" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Table</button>
               <button id="tab-graph" data-tab="graph" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Graph</button>
@@ -36,7 +31,7 @@
           </div>
 
           <div id="table-view">
-            <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
+            <div class="mb-3 w-full rounded-xl bg-slate-900/70 p-1">
               <div class="grid grid-cols-3 gap-1" data-segment-group="table-range">
                 <button id="table-range-day" data-range="day" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
                 <button id="table-range-week" data-range="week" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
@@ -85,11 +80,11 @@
                   <button id="cancel-btn" class="w-full bg-slate-300 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-400">キャンセル</button>
                 </div>
               </div>
-              <div id="table-container" class="overflow-x-auto"></div>
+              <div id="table-container" class="max-w-full overflow-x-auto"></div>
             </div>
           </div>
           <div id="graph-view" class="hidden">
-            <div class="mb-3 w-full rounded-3xl bg-slate-900/70 p-1">
+            <div class="mb-3 w-full rounded-xl bg-slate-900/70 p-1">
               <div class="grid grid-cols-3 gap-1" data-segment-group="graph-range">
                 <button id="graph-daily" data-graph-view="daily" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-blue-600 text-white">Day</button>
                 <button id="graph-weekly" data-graph-view="weekly" class="w-full rounded-2xl px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-700">Week</button>
@@ -100,7 +95,7 @@
               <span class="text-sm font-semibold text-slate-200">仮眠を含める</span>
               <input id="graph-include-nap-toggle" type="checkbox" class="toggle toggle-primary" checked />
             </div>
-            <div id="graph-container" class="rounded-xl border border-slate-200 bg-slate-50 p-4"></div>
+            <div id="graph-container" class="min-w-0 rounded-2xl border border-slate-700 bg-slate-900/60 p-4"></div>
           </div>
         </div>
       </div>
@@ -564,8 +559,8 @@
 
       const rowsHtml = summaryRows.map(item => `
         <tr>
-          <td class="border px-3 py-2 align-top">${escapeHtml(item.label)}</td>
-          <td class="border px-3 py-2 align-top">${escapeHtml(item.averageText)}</td>
+          <td class="whitespace-nowrap">${escapeHtml(item.label)}</td>
+          <td class="text-right whitespace-nowrap">${escapeHtml(item.averageText)}</td>
         </tr>
       `).join('');
 
@@ -576,17 +571,19 @@
       };
 
       summaryContainer.innerHTML = `
-        <div class="mb-4 rounded-xl border border-slate-200 overflow-hidden">
-          <div class="bg-slate-100 px-3 py-2 text-sm font-semibold text-blue-800">${titleMap[activeTableRange] || '睡眠時間'}</div>
-          <table class="w-full table-fixed text-sm">
+        <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+          <h2 class="mb-3 text-lg font-bold text-white">${titleMap[activeTableRange] || '睡眠時間'}</h2>
+          <div class="max-w-full overflow-x-auto">
+          <table class="table table-sm min-w-max">
             <thead>
               <tr>
-                <th class="w-1/2 border px-3 py-2 bg-slate-50 text-left text-blue-800">範囲</th>
-                <th class="w-1/2 border px-3 py-2 bg-slate-50 text-left text-blue-800">睡眠時間</th>
+                <th>範囲</th>
+                <th class="text-right">睡眠時間</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
+          </div>
         </div>
       `;
     }
@@ -602,26 +599,26 @@
       };
       const headerCells = [...visibleKeys];
       if (isEditMode) headerCells.push('操作');
-      const header = headerCells.map(key => `<th class="border px-3 py-2 bg-slate-100 text-left text-blue-800 whitespace-nowrap">${escapeHtml(headerLabels[key] || key)}</th>`).join('');
-      const columnWidth = headerCells.length ? `${(100 / headerCells.length).toFixed(2)}%` : '100%';
-      const colgroup = headerCells.map(() => `<col style="width:${columnWidth}">`).join('');
+      const header = headerCells.map(key => {
+        const alignClass = key === '操作' ? ' class="text-right"' : '';
+        return `<th${alignClass}>${escapeHtml(headerLabels[key] || key)}</th>`;
+      }).join('');
       const body = rows.map(row => {
         const rowId = getRowId(row);
-        const cells = visibleKeys.map(key => `<td class="border px-3 py-2 align-top whitespace-nowrap">${escapeHtml(formatValue(row[key]))}</td>`).join('');
+        const cells = visibleKeys.map(key => `<td class="whitespace-nowrap">${escapeHtml(formatValue(row[key]))}</td>`).join('');
         const actionCell = isEditMode ? `
-          <td class="border px-3 py-2 align-top">
-            <div class="flex gap-2 w-full">
-              <button data-action="edit" data-id="${rowId ?? ''}" class="flex-1 bg-amber-500 text-white px-2 py-1 rounded text-xs hover:bg-amber-600">編集</button>
-              <button data-action="delete" data-id="${rowId ?? ''}" class="flex-1 bg-rose-500 text-white px-2 py-1 rounded text-xs hover:bg-rose-600">削除</button>
+          <td class="whitespace-nowrap text-right">
+            <div class="flex justify-end gap-2">
+              <button data-action="edit" data-id="${rowId ?? ''}" class="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600">編集</button>
+              <button data-action="delete" data-id="${rowId ?? ''}" class="rounded bg-rose-500 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-600">削除</button>
             </div>
           </td>` : '';
         return `<tr>${cells}${actionCell}</tr>`;
       }).join('');
 
       tableContainer.innerHTML = `
-        <div class="rounded-xl border border-slate-200 overflow-x-auto">
-          <table class="w-full min-w-[720px] table-fixed text-sm">
-            <colgroup>${colgroup}</colgroup>
+        <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+          <table class="table table-sm min-w-max">
             <thead>
               <tr>${header}</tr>
             </thead>
@@ -803,21 +800,21 @@
       const yAxisLabels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
         const value = Math.round(maxValue * ratio);
         const y = height - bottomPadding - ratio * (height - topPadding - bottomPadding);
-        return `<text x="${axisWidth - 2}" y="${y + 4}" text-anchor="end" font-size="13" fill="#64748b">${formatChartHours(value)}</text>`;
+        return `<text x="${axisWidth - 2}" y="${y + 4}" text-anchor="end" font-size="13" fill="#cbd5e1">${formatChartHours(value)}</text>`;
       }).join('');
       const yGridLines = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
         const y = height - bottomPadding - ratio * (height - topPadding - bottomPadding);
-        return `<line x1="${sidePadding}" y1="${y}" x2="${width - sidePadding}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4 4"></line>`;
+        return `<line x1="${sidePadding}" y1="${y}" x2="${width - sidePadding}" y2="${y}" stroke="rgba(148, 163, 184, 0.25)" stroke-dasharray="4 4"></line>`;
       }).join('');
       const pointsMarkup = pointList.map(point => {
-        let axisLabel = `<text x="${point.x}" y="${height - 18}" text-anchor="middle" font-size="12" fill="#64748b">${escapeHtml(point.label)}</text>`;
+        let axisLabel = `<text x="${point.x}" y="${height - 18}" text-anchor="middle" font-size="12" fill="#cbd5e1">${escapeHtml(point.label)}</text>`;
 
         if (mode === 'weekly') {
           const weeklyLabel = String(point.label);
           const withYear = weeklyLabel.match(/^(\d{4})\s+(.+)$/);
           if (withYear) {
             axisLabel = `
-              <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#64748b">
+              <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#cbd5e1">
                 <tspan x="${point.x}" dy="0">${escapeHtml(withYear[1])}</tspan>
                 <tspan x="${point.x}" dy="12">${escapeHtml(withYear[2])}</tspan>
               </text>
@@ -826,7 +823,7 @@
             const parts = weeklyLabel.split(' - ');
             if (parts.length === 2) {
               axisLabel = `
-                <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#64748b">
+                <text x="${point.x}" y="${height - 30}" text-anchor="middle" font-size="11" fill="#cbd5e1">
                   <tspan x="${point.x}" dy="0">${escapeHtml(parts[0])}</tspan>
                   <tspan x="${point.x}" dy="12">${escapeHtml('- ' + parts[1])}</tspan>
                 </text>
@@ -836,9 +833,9 @@
         }
 
         return `
-          <circle cx="${point.x}" cy="${point.y}" r="5" fill="#2563eb"></circle>
+          <circle cx="${point.x}" cy="${point.y}" r="5" fill="#38bdf8"></circle>
           ${axisLabel}
-          <text x="${point.x}" y="${point.y - 12}" text-anchor="middle" font-size="12" fill="#1d4ed8">${escapeHtml(formatDuration(point.value))}</text>
+          <text x="${point.x}" y="${point.y - 12}" text-anchor="middle" font-size="12" fill="#e2e8f0">${escapeHtml(formatDuration(point.value))}</text>
         `;
       }).join('');
 
@@ -849,20 +846,20 @@
       };
 
       graphContainer.innerHTML = `
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <div class="mb-3 text-sm font-semibold text-blue-800">${titleMap[mode] || '睡眠時間（折れ線グラフ）'}</div>
-          <div class="flex gap-0">
+        <div>
+          <h2 class="mb-3 text-lg font-bold text-white">${titleMap[mode] || '睡眠時間（折れ線グラフ）'}</h2>
+          <div class="flex min-w-0 gap-0">
             <div class="shrink-0" style="width:${axisWidth}px;">
               <svg viewBox="0 0 ${axisWidth} ${height}" class="block w-full h-[300px] sm:h-[340px]">
                 ${yAxisLabels}
               </svg>
             </div>
-            <div id="graph-scroll-area" class="overflow-x-auto pb-2 flex-1">
+            <div id="graph-scroll-area" class="min-w-0 overflow-x-auto pb-2 flex-1">
               <div style="width:${width}px;min-width:${width}px;">
                 <svg viewBox="0 0 ${width} ${height}" class="block w-full h-[300px] sm:h-[340px]">
-                  <rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>
+                  <rect x="0" y="0" width="${width}" height="${height}" fill="#0f172a"></rect>
                   ${yGridLines}
-                  <path d="${path}" fill="none" stroke="#2563eb" stroke-width="3"></path>
+                  <path d="${path}" fill="none" stroke="#38bdf8" stroke-width="3"></path>
                   ${pointsMarkup}
                 </svg>
               </div>

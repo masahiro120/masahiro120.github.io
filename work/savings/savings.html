@@ -25,6 +25,23 @@
       background: #ffffff;
       color: #0f172a;
     }
+
+    .savings-graph-card {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .savings-chart-frame {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .savings-chart-frame canvas {
+      display: block;
+      max-width: 100%;
+      width: 100% !important;
+      height: 100% !important;
+    }
   </style>
 </head>
 
@@ -165,28 +182,28 @@
             </div>
           </div>
 
-          <div class="grid gap-6 xl:grid-cols-2">
-            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+          <div class="grid min-w-0 gap-6 xl:grid-cols-2">
+            <div class="savings-graph-card rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <h2 class="mb-3 text-lg font-bold text-white">詳細収支グラフ</h2>
-              <div class="relative h-64 sm:h-72">
+              <div class="savings-chart-frame relative h-64 sm:h-72">
                 <canvas id="detail-chart"></canvas>
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <div class="savings-graph-card rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <h2 class="mb-3 text-lg font-bold text-white">月次収支グラフ</h2>
-              <div class="relative h-64 sm:h-72">
+              <div class="savings-chart-frame relative h-64 sm:h-72">
                 <canvas id="monthly-chart"></canvas>
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <div class="savings-graph-card rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <h2 class="mb-3 text-lg font-bold text-white">銀行別・総額推移グラフ</h2>
-              <div class="relative h-64 sm:h-72">
+              <div class="savings-chart-frame relative h-64 sm:h-72">
                 <canvas id="bank-chart"></canvas>
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <div class="savings-graph-card rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <h2 class="mb-3 text-lg font-bold text-white">給料推移グラフ</h2>
-              <div class="relative h-64 sm:h-72">
+              <div class="savings-chart-frame relative h-64 sm:h-72">
                 <canvas id="salary-chart"></canvas>
               </div>
             </div>
@@ -289,6 +306,24 @@
         pendingSaveBtn.addEventListener("click", savePendingItem);
         pendingCancelBtn.addEventListener("click", resetPendingForm);
         pendingTableContainer.addEventListener("click", handlePendingTableClick);
+        window.addEventListener("resize", scheduleChartResize);
+        window.addEventListener("orientationchange", scheduleChartResize);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", scheduleChartResize);
+        }
+      }
+
+      function getChartInstances() {
+        return [detailChart, monthlyChart, bankChart, salaryChart].filter(Boolean);
+      }
+
+      function scheduleChartResize() {
+        window.clearTimeout(scheduleChartResize.timer);
+        scheduleChartResize.timer = window.setTimeout(() => {
+          requestAnimationFrame(() => {
+            getChartInstances().forEach((chart) => chart.resize());
+          });
+        }, 180);
       }
 
       function toggleCustomRangeInputs() {
@@ -1068,31 +1103,32 @@
           return;
         }
 
-        const headers = ["項目名", "種別", "金額"];
-        if (pendingEditMode) headers.push("操作");
-        const headerHtml = headers.map((label) => `<th class=\"border px-3 py-2 bg-slate-100 text-left text-blue-800 whitespace-nowrap\">${label}</th>`).join("");
-
         const rowsHtml = pendingItems.map((row) => {
-          const actionCell = pendingEditMode ? `<td class=\"border px-3 py-2 align-top\">
-              <div class=\"flex gap-2 w-full\">
-                <button data-action=\"edit\" data-id=\"${row.id}\" class=\"flex-1 rounded bg-amber-500 px-2 py-1 text-xs text-white hover:bg-amber-600\">編集</button>
-                <button data-action=\"delete\" data-id=\"${row.id}\" class=\"flex-1 rounded bg-rose-500 px-2 py-1 text-xs text-white hover:bg-rose-600\">削除</button>
+          const actionCell = pendingEditMode ? `<td class="whitespace-nowrap text-right">
+              <div class="flex justify-end gap-2">
+                <button data-action="edit" data-id="${row.id}" class="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600">編集</button>
+                <button data-action="delete" data-id="${row.id}" class="rounded bg-rose-500 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-600">削除</button>
               </div>
             </td>` : "";
           return `<tr>
-            <td class=\"border px-3 py-2 align-top whitespace-nowrap\">${escapeHtml(row.itemName)}</td>
-            <td class=\"border px-3 py-2 align-top whitespace-nowrap\">${row.kind === "income" ? "収入" : "支出"}</td>
-            <td class=\"border px-3 py-2 align-top whitespace-nowrap text-right\">${formatCurrency(row.amount)}</td>
+            <td class="whitespace-nowrap">${escapeHtml(row.itemName)}</td>
+            <td class="whitespace-nowrap">${row.kind === "income" ? "収入" : "支出"}</td>
+            <td class="text-right whitespace-nowrap">${formatCurrency(row.amount)}</td>
             ${actionCell}
           </tr>`;
         }).join("");
 
-        pendingTableContainer.innerHTML = `<div class="rounded-xl border border-slate-200 overflow-x-auto">
-          <table class="w-full min-w-[520px] table-fixed text-sm">
-            <thead><tr>${headerHtml}</tr></thead>
+        pendingTableContainer.innerHTML = `<table class="table table-sm min-w-max">
+            <thead>
+              <tr>
+                <th>項目名</th>
+                <th>種別</th>
+                <th class="text-right">金額</th>
+                ${pendingEditMode ? '<th class="text-right">操作</th>' : ""}
+              </tr>
+            </thead>
             <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>`;
+          </table>`;
       }
 
       function escapeHtml(value) {

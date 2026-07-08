@@ -48,6 +48,11 @@
             </div>
           </div>
 
+          <div class="flex items-center justify-end gap-3">
+            <span class="text-sm font-semibold text-slate-200">小数第1位まで表示</span>
+            <input id="decimal-toggle" type="checkbox" class="toggle toggle-primary" />
+          </div>
+
           <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-200">
             <div class="grid gap-2 md:grid-cols-2">
               <p>
@@ -137,6 +142,7 @@
     const saveSettingsBtn = document.getElementById("save-settings-btn");
     const cancelSettingsBtn = document.getElementById("cancel-settings-btn");
     const settingsError = document.getElementById("settings-error");
+    const decimalToggle = document.getElementById("decimal-toggle");
 
     const modeEndDate = document.getElementById("mode-end-date");
     const modeDuration = document.getElementById("mode-duration");
@@ -161,6 +167,7 @@
     let currentRecordId = DEFAULT_RECORD_ID;
     let progressAnimationFrame = null;
     let progressAnimationToken = 0;
+    let showDecimalProgress = false;
 
     function formatDate(date) {
       const y = date.getFullYear();
@@ -388,9 +395,9 @@
       const elapsedDaysRaw = dayDiff(start, now);
       const elapsedDays = Math.min(totalDays, Math.max(0, elapsedDaysRaw));
       const remainingDays = Math.max(0, totalDays - elapsedDays);
-      const percent = Math.round((elapsedDays / totalDays) * 100);
+      const exactPercent = (elapsedDays / totalDays) * 100;
       return {
-        percent,
+        percent: exactPercent,
         totalDays,
         remainingDays,
         startText: formatDateDisplay(start),
@@ -402,7 +409,7 @@
       const bounded = Math.max(0, Math.min(100, percent));
       const offset = circumference * (1 - bounded / 100);
       progressRing.style.strokeDashoffset = `${offset}`;
-      progressValue.textContent = `${bounded}%`;
+      progressValue.textContent = showDecimalProgress ? `${bounded.toFixed(1)}%` : `${Math.round(bounded)}%`;
     }
 
     function stopProgressAnimation() {
@@ -425,7 +432,7 @@
         const elapsed = now - startTime;
         const t = Math.min(1, elapsed / duration);
         const eased = 1 - Math.pow(1 - t, 3);
-        const value = Math.round(boundedTarget * eased);
+        const value = boundedTarget * eased;
         setRingProgress(value);
         if (t < 1) {
           progressAnimationFrame = requestAnimationFrame(step);
@@ -470,6 +477,11 @@
     }
 
     function bindEvents() {
+      decimalToggle.addEventListener("change", () => {
+        showDecimalProgress = decimalToggle.checked;
+        recalculateAndRender(false);
+      });
+
       editToggleBtn.addEventListener("click", () => {
         const willOpen = editPanel.classList.contains("hidden");
         if (willOpen) {

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>貯金管理ダッシュボード</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .pending-light-control {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    .pending-light-control::placeholder {
+      color: #64748b !important;
+    }
+
+    .pending-light-control option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+  </style>
+</head>
+
+<body class="page-shell">
+    <div class="main-container">
+      <div class="page-card">
+        <div class="card-body space-y-6">
+          <div class="section-title section-title-inline">
+            <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">貯金管理</h1>
+            <a href="/index.html" class="back-button back-button-inline">戻る</a>
+          </div>
+
+          <div id="status" class="rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200">データを読み込み中...</div>
+
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div class="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-slate-200">表示期間</label>
+                  <select id="range-mode" class="select select-bordered w-full bg-slate-100 text-slate-900">
+                    <option value="month">直近1ヶ月</option>
+                    <option value="quarter" selected>直近3ヶ月</option>
+                    <option value="year">直近1年</option>
+                    <option value="all">全期間</option>
+                    <option value="custom">日付指定</option>
+                  </select>
+                </div>
+                <div id="custom-start-wrap" class="hidden">
+                  <label class="mb-2 block text-sm font-semibold text-slate-200">開始日</label>
+                  <input id="custom-start" type="date" class="input input-bordered w-full bg-slate-100 text-slate-900" />
+                </div>
+                <div id="custom-end-wrap" class="hidden">
+                  <label class="mb-2 block text-sm font-semibold text-slate-200">終了日</label>
+                  <input id="custom-end" type="date" class="input input-bordered w-full bg-slate-100 text-slate-900" />
+                </div>
+              </div>
+              <button id="refresh-btn" class="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white hover:bg-blue-700">更新</button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-lg font-bold text-white">暫定項目</h2>
+                <p class="text-sm text-slate-300">未払いカードや仮計上の収支を管理します。</p>
+              </div>
+              <button id="pending-detail-toggle-btn" class="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">詳細</button>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                <p class="text-xs text-slate-300">暫定収入合計</p>
+                <p id="pending-income-total" class="mt-1 text-xl font-black text-emerald-300">0 円</p>
+              </div>
+              <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                <p class="text-xs text-slate-300">暫定支出合計</p>
+                <p id="pending-expense-total" class="mt-1 text-xl font-black text-rose-300">0 円</p>
+              </div>
+              <div class="rounded-xl border border-amber-400/40 bg-amber-900/20 p-3">
+                <p class="text-xs text-slate-200">暫定収支差分</p>
+                <p id="pending-net-total" class="mt-1 text-xl font-black text-amber-200">0 円</p>
+              </div>
+            </div>
+
+            <div id="pending-detail-panel" class="hidden space-y-4 pt-4">
+              <div class="grid grid-cols-2 gap-2 w-full">
+                <button id="pending-add-btn" class="w-full rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">追加</button>
+                <button id="pending-edit-btn" class="w-full rounded-lg bg-amber-500 px-4 py-2 text-white hover:bg-amber-600">編集</button>
+              </div>
+
+              <div id="pending-form-panel" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p id="pending-form-title" class="mb-3 font-semibold">追加 / 編集</p>
+                <div class="grid gap-4 md:grid-cols-3">
+                  <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">項目名</label>
+                    <input id="pending-item-name" type="text" class="pending-light-control input input-bordered w-full" placeholder="例: PAYPAY未払い" />
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">種別</label>
+                    <select id="pending-item-kind" class="pending-light-control select select-bordered w-full">
+                      <option value="expense" selected>支出</option>
+                      <option value="income">収入</option>
+                    </select>
+                  </div>
+                  <div class="md:col-span-3">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">金額</label>
+                    <input id="pending-item-amount" type="number" min="0" step="1" class="pending-light-control input input-bordered w-full" placeholder="0" />
+                  </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-2 w-full">
+                  <button id="pending-save-btn" class="w-full rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">追加する</button>
+                  <button id="pending-cancel-btn" class="w-full rounded-lg bg-slate-300 px-4 py-2 text-slate-800 hover:bg-slate-400">キャンセル</button>
+                </div>
+              </div>
+
+              <div id="pending-table-container" class="overflow-x-auto"></div>
+            </div>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <p class="text-xs text-slate-300">期間内収入</p>
+              <p id="metric-income" class="mt-1 text-2xl font-black text-emerald-300">-</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <p class="text-xs text-slate-300">期間内支出</p>
+              <p id="metric-expense" class="mt-1 text-2xl font-black text-rose-300">-</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <p class="text-xs text-slate-300">期間内収支</p>
+              <p id="metric-net" class="mt-1 text-2xl font-black text-sky-300">-</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <p class="text-xs text-slate-300">期間内貯金増減率</p>
+              <p id="metric-growth" class="mt-1 text-2xl font-black text-amber-300">-</p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <h2 class="mb-3 text-lg font-bold text-white">銀行別現在残高</h2>
+            <div id="bank-balance-cards" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"></div>
+          </div>
+
+          <div class="grid min-w-0 gap-6 xl:grid-cols-2">
+            <div class="min-w-0 rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-bold text-white">給料推移</h2>
+                <label class="flex items-center gap-3 text-sm font-semibold text-slate-200">
+                  <span>賞与を含める</span>
+                  <input id="salary-bonus-toggle" type="checkbox" class="toggle toggle-primary" checked />
+                </label>
+              </div>
+              <div id="salary-table" class="max-w-full overflow-x-auto"></div>
+            </div>
+            <div class="min-w-0 rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 class="mb-3 text-lg font-bold text-white">月次収支</h2>
+              <div id="monthly-table" class="max-w-full overflow-x-auto"></div>
+            </div>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-2">
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 class="mb-3 text-lg font-bold text-white">詳細収支グラフ</h2>
+              <div class="relative h-64 sm:h-72">
+                <canvas id="detail-chart"></canvas>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 class="mb-3 text-lg font-bold text-white">月次収支グラフ</h2>
+              <div class="relative h-64 sm:h-72">
+                <canvas id="monthly-chart"></canvas>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 class="mb-3 text-lg font-bold text-white">銀行別・総額推移グラフ</h2>
+              <div class="relative h-64 sm:h-72">
+                <canvas id="bank-chart"></canvas>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+              <h2 class="mb-3 text-lg font-bold text-white">給料推移グラフ</h2>
+              <div class="relative h-64 sm:h-72">
+                <canvas id="salary-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+      const TRANSACTION_TABLE = "transactions";
+      const INITIAL_BALANCE_TABLE = "bank_initial_balance";
+      const PENDING_TABLE = "savings_pending_items";
+
+      const supabaseClient = window.supabase && typeof window.supabase.createClient === "function"
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+        : null;
+
+      const statusEl = document.getElementById("status");
+      const rangeModeEl = document.getElementById("range-mode");
+      const customStartWrap = document.getElementById("custom-start-wrap");
+      const customEndWrap = document.getElementById("custom-end-wrap");
+      const customStartEl = document.getElementById("custom-start");
+      const customEndEl = document.getElementById("custom-end");
+      const refreshBtn = document.getElementById("refresh-btn");
+      const salaryBonusToggle = document.getElementById("salary-bonus-toggle");
+
+      const pendingIncomeTotalEl = document.getElementById("pending-income-total");
+      const pendingExpenseTotalEl = document.getElementById("pending-expense-total");
+      const pendingNetTotalEl = document.getElementById("pending-net-total");
+      const pendingDetailToggleBtn = document.getElementById("pending-detail-toggle-btn");
+      const pendingDetailPanel = document.getElementById("pending-detail-panel");
+      const pendingAddBtn = document.getElementById("pending-add-btn");
+      const pendingEditBtn = document.getElementById("pending-edit-btn");
+      const pendingFormPanel = document.getElementById("pending-form-panel");
+      const pendingFormTitle = document.getElementById("pending-form-title");
+      const pendingItemNameEl = document.getElementById("pending-item-name");
+      const pendingItemKindEl = document.getElementById("pending-item-kind");
+      const pendingItemAmountEl = document.getElementById("pending-item-amount");
+      const pendingSaveBtn = document.getElementById("pending-save-btn");
+      const pendingCancelBtn = document.getElementById("pending-cancel-btn");
+      const pendingTableContainer = document.getElementById("pending-table-container");
+
+      const metricIncome = document.getElementById("metric-income");
+      const metricExpense = document.getElementById("metric-expense");
+      const metricNet = document.getElementById("metric-net");
+      const metricGrowth = document.getElementById("metric-growth");
+
+      const bankBalanceCardsEl = document.getElementById("bank-balance-cards");
+      const salaryTableEl = document.getElementById("salary-table");
+      const monthlyTableEl = document.getElementById("monthly-table");
+
+      const detailChartEl = document.getElementById("detail-chart");
+      const monthlyChartEl = document.getElementById("monthly-chart");
+      const bankChartEl = document.getElementById("bank-chart");
+      const salaryChartEl = document.getElementById("salary-chart");
+
+      let allTransactions = [];
+      let initialBalances = [];
+      let pendingItems = [];
+
+      let detailChart = null;
+      let monthlyChart = null;
+      let bankChart = null;
+      let salaryChart = null;
+
+      let includeBonusInSalary = true;
+      let pendingDetailVisible = false;
+      let pendingEditMode = false;
+      let pendingCurrentRowId = null;
+      let pendingTableAvailable = true;
+
+      const preferredBankOrder = ["みずほ", "三菱UFJ", "三菱経費"];
+
+      document.addEventListener("DOMContentLoaded", () => {
+        bindEvents();
+        loadData();
+      });
+
+      function bindEvents() {
+        rangeModeEl.addEventListener("change", () => {
+          toggleCustomRangeInputs();
+          render();
+        });
+        refreshBtn.addEventListener("click", () => render());
+        customStartEl.addEventListener("change", () => render());
+        customEndEl.addEventListener("change", () => render());
+        salaryBonusToggle.addEventListener("change", () => {
+          includeBonusInSalary = salaryBonusToggle.checked;
+          render();
+        });
+
+        pendingDetailToggleBtn.addEventListener("click", () => {
+          pendingDetailVisible = !pendingDetailVisible;
+          updatePendingDetailVisibility();
+        });
+        pendingAddBtn.addEventListener("click", togglePendingAddForm);
+        pendingEditBtn.addEventListener("click", togglePendingEditMode);
+        pendingSaveBtn.addEventListener("click", savePendingItem);
+        pendingCancelBtn.addEventListener("click", resetPendingForm);
+        pendingTableContainer.addEventListener("click", handlePendingTableClick);
+      }
+
+      function toggleCustomRangeInputs() {
+        const isCustom = rangeModeEl.value === "custom";
+        customStartWrap.classList.toggle("hidden", !isCustom);
+        customEndWrap.classList.toggle("hidden", !isCustom);
+      }
+
+      function setStatus(text, isError = false) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle("text-rose-300", isError);
+        statusEl.classList.toggle("text-slate-200", !isError);
+      }
+
+      function parseAmount(value) {
+        if (value === null || value === undefined || value === "") return 0;
+        const normalized = String(value).replace(/,/g, "").trim();
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function parseDate(value) {
+        if (!value) return null;
+        const date = new Date(`${value}T00:00:00`);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      function formatYmd(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}/${m}/${d}`;
+      }
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 0 }).format(Math.round(value));
+      }
+
+      function toDateInputValue(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function buildRangeBounds(rows) {
+        if (!rows.length) {
+          const today = new Date();
+          return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: today };
+        }
+
+        const mode = rangeModeEl.value;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (mode === "all") {
+          return { start: rows[0].date, end: rows[rows.length - 1].date };
+        }
+
+        if (mode === "custom") {
+          const customStart = parseDate(customStartEl.value);
+          const customEnd = parseDate(customEndEl.value);
+          if (customStart && customEnd && customStart <= customEnd) {
+            return { start: customStart, end: customEnd };
+          }
+          return { start: rows[0].date, end: rows[rows.length - 1].date };
+        }
+
+        const end = today;
+        const start = new Date(today.getTime());
+        if (mode === "month") start.setMonth(start.getMonth() - 1);
+        if (mode === "quarter") start.setMonth(start.getMonth() - 3);
+        if (mode === "year") start.setFullYear(start.getFullYear() - 1);
+
+        return { start, end };
+      }
+
+      function clampDate(date, minDate, maxDate) {
+        if (date < minDate) return new Date(minDate.getTime());
+        if (date > maxDate) return new Date(maxDate.getTime());
+        return date;
+      }
+
+      function addDays(date, days) {
+        const copied = new Date(date.getTime());
+        copied.setDate(copied.getDate() + days);
+        return copied;
+      }
+
+      function getAllBanks(rows, initialRows) {
+        const bankSet = new Set();
+        rows.forEach((row) => bankSet.add(row.bank));
+        initialRows.forEach((row) => bankSet.add(row.bank));
+        const ordered = [];
+        preferredBankOrder.forEach((name) => {
+          if (bankSet.has(name)) {
+            ordered.push(name);
+            bankSet.delete(name);
+          }
+        });
+        return [...ordered, ...Array.from(bankSet).sort((a, b) => a.localeCompare(b, "ja"))];
+      }
+
+      function getMonthlyKeys(startDate, endDate) {
+        const keys = [];
+        const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        const last = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+        while (current <= last) {
+          keys.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`);
+          current.setMonth(current.getMonth() + 1);
+        }
+        return keys;
+      }
+
+      function monthEndFromKey(monthKey) {
+        const [year, month] = monthKey.split("-").map(Number);
+        return new Date(year, month, 0);
+      }
+
+      function destroyCharts() {
+        if (detailChart) detailChart.destroy();
+        if (monthlyChart) monthlyChart.destroy();
+        if (bankChart) bankChart.destroy();
+        if (salaryChart) salaryChart.destroy();
+        detailChart = null;
+        monthlyChart = null;
+        bankChart = null;
+        salaryChart = null;
+      }
+
+      async function loadData() {
+        if (!supabaseClient) {
+          setStatus("Supabaseクライアントを初期化できませんでした。", true);
+          return;
+        }
+
+        try {
+          setStatus("データを読み込み中...");
+
+          const [{ data: txData, error: txError }, { data: initialData, error: initialError }, pendingResponse] = await Promise.all([
+            supabaseClient
+              .from(TRANSACTION_TABLE)
+              .select("date, content, income, expense, bank")
+              .order("date", { ascending: true }),
+            supabaseClient
+              .from(INITIAL_BALANCE_TABLE)
+              .select("bank, snapshot_date, balance")
+              .order("snapshot_date", { ascending: true }),
+            supabaseClient
+              .from(PENDING_TABLE)
+              .select("id, item_name, kind, amount")
+              .order("id", { ascending: true })
+          ]);
+
+          if (txError) {
+            throw new Error(`transactions 読み込み失敗: ${txError.message}`);
+          }
+
+          if (initialError && !/relation .* does not exist/i.test(initialError.message || "")) {
+            throw new Error(`bank_initial_balance 読み込み失敗: ${initialError.message}`);
+          }
+
+          if (pendingResponse.error) {
+            if (/relation .* does not exist/i.test(pendingResponse.error.message || "")) {
+              pendingTableAvailable = false;
+              pendingItems = [];
+            } else {
+              throw new Error(`savings_pending_items 読み込み失敗: ${pendingResponse.error.message}`);
+            }
+          } else {
+            pendingTableAvailable = true;
+            pendingItems = (pendingResponse.data || []).map((row) => ({
+              id: row.id,
+              itemName: row.item_name || "",
+              kind: row.kind === "income" ? "income" : "expense",
+              amount: parseAmount(row.amount)
+            }));
+          }
+
+          allTransactions = (txData || [])
+            .map((row) => {
+              const date = parseDate(String(row.date || "").replace(/\//g, "-"));
+              if (!date) return null;
+              return {
+                date,
+                content: row.content || "",
+                income: parseAmount(row.income),
+                expense: parseAmount(row.expense),
+                bank: row.bank || "未設定"
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.date - b.date);
+
+          initialBalances = (initialData || []).map((row) => ({
+            bank: row.bank || "未設定",
+            snapshotDate: parseDate(String(row.snapshot_date || "").replace(/\//g, "-")),
+            balance: parseAmount(row.balance)
+          }));
+
+          if (!allTransactions.length) {
+            setStatus("取引データがありません。transactions テーブルを確認してください。", true);
+            renderEmpty();
+            return;
+          }
+
+          const minDate = allTransactions[0].date;
+          const maxDate = allTransactions[allTransactions.length - 1].date;
+          if (!customStartEl.value) customStartEl.value = toDateInputValue(minDate);
+          if (!customEndEl.value) customEndEl.value = toDateInputValue(maxDate);
+
+          updatePendingDetailVisibility();
+          renderPendingPanel();
+          render();
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || "データ読み込みでエラーが発生しました。", true);
+          renderEmpty();
+        }
+      }
+
+      function renderEmpty() {
+        metricIncome.textContent = "0 円";
+        metricExpense.textContent = "0 円";
+        metricNet.textContent = "0 円";
+        metricGrowth.textContent = "0.0%";
+        pendingIncomeTotalEl.textContent = "0 円";
+        pendingExpenseTotalEl.textContent = "0 円";
+        pendingNetTotalEl.textContent = "0 円";
+        bankBalanceCardsEl.innerHTML = "";
+        salaryTableEl.innerHTML = "<p class='text-sm text-slate-300'>データがありません。</p>";
+        monthlyTableEl.innerHTML = "<p class='text-sm text-slate-300'>データがありません。</p>";
+        pendingTableContainer.innerHTML = "";
+        destroyCharts();
+      }
+
+      function calculateBalanceAtDate(rows, initialByBank, targetDate, banks) {
+        const balance = {};
+        banks.forEach((bank) => {
+          balance[bank] = initialByBank.get(bank) || 0;
+        });
+
+        rows.forEach((row) => {
+          if (row.date > targetDate) return;
+          if (!(row.bank in balance)) balance[row.bank] = 0;
+          balance[row.bank] += row.income - row.expense;
+        });
+
+        return balance;
+      }
+
+      function getPendingTotals() {
+        return pendingItems.reduce((acc, item) => {
+          const amount = parseAmount(item.amount);
+          if (item.kind === "income") {
+            acc.income += amount;
+            acc.net += amount;
+          } else {
+            acc.expense += amount;
+            acc.net -= amount;
+          }
+          return acc;
+        }, { income: 0, expense: 0, net: 0 });
+      }
+
+      function buildMonthlyData(rows, rangeStart, rangeEnd, banks, initialByBank, pendingNet) {
+        const monthKeys = getMonthlyKeys(rangeStart, rangeEnd);
+        const monthlyMap = new Map();
+        monthKeys.forEach((key) => {
+          monthlyMap.set(key, { income: 0, expense: 0, net: 0 });
+        });
+
+        rows.forEach((row) => {
+          if (row.date < rangeStart || row.date > rangeEnd) return;
+          const key = `${row.date.getFullYear()}-${String(row.date.getMonth() + 1).padStart(2, "0")}`;
+          const month = monthlyMap.get(key);
+          if (!month) return;
+          month.income += row.income;
+          month.expense += row.expense;
+          month.net = month.income - month.expense;
+        });
+
+        return monthKeys.map((key) => {
+          const monthEnd = monthEndFromKey(key);
+          const balances = calculateBalanceAtDate(rows, initialByBank, monthEnd, banks);
+          const total = Object.values(balances).reduce((sum, value) => sum + value, 0);
+          const month = monthlyMap.get(key) || { income: 0, expense: 0, net: 0 };
+          return {
+            monthKey: key,
+            income: month.income,
+            expense: month.expense,
+            net: month.net,
+            balances,
+            total,
+            tentativeTotal: total + pendingNet
+          };
+        });
+      }
+
+      function isSalaryRow(row) {
+        return /給与|給料/.test(row.content || "");
+      }
+
+      function isBonusRow(row) {
+        return /賞与|ボーナス/.test(row.content || "");
+      }
+
+      function buildSalaryData(rows, includeBonus) {
+        const salaryMap = new Map();
+        rows.forEach((row) => {
+          const salaryMatch = isSalaryRow(row);
+          const bonusMatch = isBonusRow(row);
+          if (!salaryMatch && !(includeBonus && bonusMatch)) return;
+          if (!includeBonus && bonusMatch) return;
+          const monthKey = `${row.date.getFullYear()}-${String(row.date.getMonth() + 1).padStart(2, "0")}`;
+          salaryMap.set(monthKey, (salaryMap.get(monthKey) || 0) + row.income);
+        });
+
+        return Array.from(salaryMap.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([monthKey, amount]) => ({ monthKey, amount }));
+      }
+
+      function buildDetailSeries(rows, rangeStart, rangeEnd) {
+        const dailyMap = new Map();
+        const cursor = new Date(rangeStart.getTime());
+        while (cursor <= rangeEnd) {
+          dailyMap.set(toDateInputValue(cursor), { income: 0, expense: 0, hasActivity: false });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+
+        rows.forEach((row) => {
+          const key = toDateInputValue(row.date);
+          if (!dailyMap.has(key)) return;
+          const item = dailyMap.get(key);
+          item.income += row.income;
+          item.expense += row.expense;
+          if (row.income !== 0 || row.expense !== 0) item.hasActivity = true;
+        });
+
+        const labels = [];
+        const incomes = [];
+        const expenses = [];
+        const cumulativeNet = [];
+        let running = 0;
+
+        Array.from(dailyMap.entries()).forEach(([ymd, value]) => {
+          labels.push(ymd.replace(/-/g, "/"));
+          incomes.push(value.hasActivity && value.income !== 0 ? value.income : null);
+          expenses.push(value.hasActivity && value.expense !== 0 ? value.expense : null);
+          running += value.income - value.expense;
+          cumulativeNet.push(running);
+        });
+
+        return { labels, incomes, expenses, cumulativeNet };
+      }
+
+      function render() {
+        if (!allTransactions.length) {
+          renderEmpty();
+          return;
+        }
+
+        const minDate = allTransactions[0].date;
+        const maxDate = allTransactions[allTransactions.length - 1].date;
+        const rawRange = buildRangeBounds(allTransactions);
+        const rangeStart = clampDate(rawRange.start, minDate, maxDate);
+        const rangeEnd = clampDate(rawRange.end, minDate, maxDate);
+
+        if (rangeStart > rangeEnd) {
+          setStatus("期間指定が不正です。開始日と終了日を確認してください。", true);
+          return;
+        }
+
+        const banks = getAllBanks(allTransactions, initialBalances);
+        const initialByBank = new Map(banks.map((bank) => [bank, 0]));
+        initialBalances.forEach((row) => {
+          initialByBank.set(row.bank, row.balance);
+        });
+
+        const inRangeRows = allTransactions.filter((row) => row.date >= rangeStart && row.date <= rangeEnd);
+        const totalIncome = inRangeRows.reduce((sum, row) => sum + row.income, 0);
+        const totalExpense = inRangeRows.reduce((sum, row) => sum + row.expense, 0);
+        const totalNet = totalIncome - totalExpense;
+        const pendingTotals = getPendingTotals();
+
+        const balanceBeforeStart = calculateBalanceAtDate(allTransactions, initialByBank, addDays(rangeStart, -1), banks);
+        const balanceAtEnd = calculateBalanceAtDate(allTransactions, initialByBank, rangeEnd, banks);
+        const totalBeforeStart = Object.values(balanceBeforeStart).reduce((sum, value) => sum + value, 0);
+        const totalAtEnd = Object.values(balanceAtEnd).reduce((sum, value) => sum + value, 0);
+        const growthRate = totalBeforeStart === 0 ? 0 : ((totalAtEnd - totalBeforeStart) / totalBeforeStart) * 100;
+
+        metricIncome.textContent = `${formatCurrency(totalIncome)} 円`;
+        metricExpense.textContent = `${formatCurrency(totalExpense)} 円`;
+        metricNet.textContent = `${formatCurrency(totalNet)} 円`;
+        metricGrowth.textContent = `${growthRate.toFixed(1)}%`;
+
+        renderPendingSummary(pendingTotals);
+        renderBankBalanceCards(balanceAtEnd, totalAtEnd, pendingTotals.net);
+
+        const monthlyData = buildMonthlyData(allTransactions, rangeStart, rangeEnd, banks, initialByBank, pendingTotals.net);
+        const salaryData = buildSalaryData(inRangeRows, includeBonusInSalary);
+        const detailData = buildDetailSeries(inRangeRows, rangeStart, rangeEnd);
+
+        renderSalaryTable(salaryData);
+        renderMonthlyTable(monthlyData, banks);
+        renderCharts(detailData, monthlyData, salaryData, banks, includeBonusInSalary);
+
+        const pendingNote = pendingTableAvailable ? "" : " / savings_pending_items テーブル未作成";
+        setStatus(`${formatYmd(rangeStart)} - ${formatYmd(rangeEnd)} を表示中${pendingNote}`, !pendingTableAvailable);
+      }
+
+      function renderPendingSummary(totals) {
+        pendingIncomeTotalEl.textContent = `${formatCurrency(totals.income)} 円`;
+        pendingExpenseTotalEl.textContent = `${formatCurrency(totals.expense)} 円`;
+        pendingNetTotalEl.textContent = `${totals.net < 0 ? "-" : ""}${formatCurrency(Math.abs(totals.net))} 円`;
+      }
+
+      function renderBankBalanceCards(balanceByBank, total, pendingNet) {
+        const entries = Object.entries(balanceByBank);
+        const cards = entries.map(([bank, amount]) => `<div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+            <p class="text-xs text-slate-300">${escapeHtml(bank)}</p>
+            <p class="mt-1 text-xl font-black text-white">${formatCurrency(amount)} 円</p>
+          </div>`);
+
+        cards.push(`<div class="rounded-xl border border-blue-400/40 bg-blue-900/30 p-3">
+          <p class="text-xs text-slate-200">貯金総額</p>
+          <p class="mt-1 text-xl font-black text-blue-200">${formatCurrency(total)} 円</p>
+        </div>`);
+
+        cards.push(`<div class="rounded-xl border border-amber-400/40 bg-amber-900/20 p-3">
+          <p class="text-xs text-slate-200">暫定貯金総額</p>
+          <p class="mt-1 text-xl font-black text-amber-200">${formatCurrency(total + pendingNet)} 円</p>
+        </div>`);
+
+        bankBalanceCardsEl.innerHTML = cards.join("");
+      }
+
+      function renderSalaryTable(salaryData) {
+        if (!salaryData.length) {
+          salaryTableEl.innerHTML = "<p class='text-sm text-slate-300'>指定期間の給料データはありません。</p>";
+          return;
+        }
+
+        const rows = salaryData.map((item) => `<tr>
+            <td class="whitespace-nowrap">${item.monthKey.replace("-", "/")}</td>
+            <td class="text-right whitespace-nowrap">${formatCurrency(item.amount)}</td>
+          </tr>`).join("");
+
+        salaryTableEl.innerHTML = `<table class="table table-sm min-w-max">
+          <thead>
+            <tr><th>月</th><th class="text-right">給与</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+      }
+
+      function renderMonthlyTable(monthlyData, banks) {
+        if (!monthlyData.length) {
+          monthlyTableEl.innerHTML = "<p class='text-sm text-slate-300'>指定期間の月次データはありません。</p>";
+          return;
+        }
+
+        const bankHeaders = banks.map((bank) => `<th class="text-right whitespace-nowrap">${escapeHtml(bank)}残高</th>`).join("");
+        const rows = monthlyData.map((item) => {
+          const bankCells = banks.map((bank) => `<td class="text-right whitespace-nowrap">${formatCurrency(item.balances[bank] || 0)}</td>`).join("");
+          return `<tr>
+            <td class="whitespace-nowrap">${item.monthKey.replace("-", "/")}</td>
+            <td class="text-right whitespace-nowrap">${formatCurrency(item.income)}</td>
+            <td class="text-right whitespace-nowrap">${formatCurrency(item.expense)}</td>
+            <td class="text-right whitespace-nowrap">${formatCurrency(item.net)}</td>
+            ${bankCells}
+            <td class="text-right whitespace-nowrap font-semibold">${formatCurrency(item.total)}</td>
+            <td class="text-right whitespace-nowrap font-semibold">${formatCurrency(item.tentativeTotal)}</td>
+          </tr>`;
+        }).join("");
+
+        monthlyTableEl.innerHTML = `<table class="table table-sm min-w-max">
+          <thead>
+            <tr>
+              <th>月次収支</th>
+              <th class="text-right">収入</th>
+              <th class="text-right">支出</th>
+              <th class="text-right">収支</th>
+              ${bankHeaders}
+              <th class="text-right">貯金総額</th>
+              <th class="text-right">暫定貯金総額</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+      }
+
+      function getCommonChartOptions() {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#e2e8f0" } }
+          },
+          interaction: {
+            intersect: false,
+            mode: "index"
+          },
+          scales: {
+            x: { ticks: { color: "#cbd5e1", maxRotation: 0, autoSkip: true }, grid: { color: "rgba(148, 163, 184, 0.15)" } },
+            y: { ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148, 163, 184, 0.15)" } }
+          }
+        };
+      }
+
+      function renderCharts(detailData, monthlyData, salaryData, banks, includeBonus) {
+        destroyCharts();
+
+        detailChart = new Chart(detailChartEl, {
+          type: "line",
+          data: {
+            labels: detailData.labels,
+            datasets: [
+              { label: "収入", data: detailData.incomes, borderColor: "#34d399", backgroundColor: "rgba(52, 211, 153, 0.2)", spanGaps: true, tension: 0.25 },
+              { label: "支出", data: detailData.expenses, borderColor: "#fb7185", backgroundColor: "rgba(251, 113, 133, 0.2)", spanGaps: true, tension: 0.25 },
+              { label: "累積収支", data: detailData.cumulativeNet, borderColor: "#60a5fa", backgroundColor: "rgba(96, 165, 250, 0.2)", tension: 0.25, pointRadius: 0 }
+            ]
+          },
+          options: getCommonChartOptions()
+        });
+
+        monthlyChart = new Chart(monthlyChartEl, {
+          type: "line",
+          data: {
+            labels: monthlyData.map((item) => item.monthKey.replace("-", "/")),
+            datasets: [
+              { label: "月次収入", data: monthlyData.map((item) => item.income), borderColor: "#4ade80", backgroundColor: "rgba(74, 222, 128, 0.2)", tension: 0.25 },
+              { label: "月次支出", data: monthlyData.map((item) => item.expense), borderColor: "#f43f5e", backgroundColor: "rgba(244, 63, 94, 0.2)", tension: 0.25 },
+              { label: "月次収支", data: monthlyData.map((item) => item.net), borderColor: "#38bdf8", backgroundColor: "rgba(56, 189, 248, 0.2)", tension: 0.25 }
+            ]
+          },
+          options: getCommonChartOptions()
+        });
+
+        const bankPalette = ["#f59e0b", "#a78bfa", "#22d3ee", "#f97316", "#2dd4bf", "#f472b6"];
+        const bankDatasets = banks.map((bank, index) => ({
+          label: `${bank}残高`,
+          data: monthlyData.map((item) => item.balances[bank] || 0),
+          borderColor: bankPalette[index % bankPalette.length],
+          backgroundColor: "rgba(148, 163, 184, 0.15)",
+          tension: 0.25
+        }));
+
+        bankDatasets.push({
+          label: "貯金総額",
+          data: monthlyData.map((item) => item.total),
+          borderColor: "#60a5fa",
+          backgroundColor: "rgba(96, 165, 250, 0.2)",
+          borderWidth: 3,
+          tension: 0.25
+        });
+
+        bankDatasets.push({
+          label: "暫定貯金総額",
+          data: monthlyData.map((item) => item.tentativeTotal),
+          borderColor: "#fbbf24",
+          backgroundColor: "rgba(251, 191, 36, 0.2)",
+          tension: 0.25,
+          borderDash: [6, 4]
+        });
+
+        bankChart = new Chart(bankChartEl, {
+          type: "line",
+          data: {
+            labels: monthlyData.map((item) => item.monthKey.replace("-", "/")),
+            datasets: bankDatasets
+          },
+          options: getCommonChartOptions()
+        });
+
+        salaryChart = new Chart(salaryChartEl, {
+          type: "line",
+          data: {
+            labels: salaryData.map((item) => item.monthKey.replace("-", "/")),
+            datasets: [
+              {
+                label: includeBonus ? "給与+賞与" : "給与",
+                data: salaryData.map((item) => item.amount),
+                borderColor: "#22c55e",
+                backgroundColor: "rgba(34, 197, 94, 0.2)",
+                tension: 0.25
+              }
+            ]
+          },
+          options: getCommonChartOptions()
+        });
+      }
+
+      function updatePendingDetailVisibility() {
+        pendingDetailPanel.classList.toggle("hidden", !pendingDetailVisible);
+        pendingDetailToggleBtn.textContent = pendingDetailVisible ? "詳細を閉じる" : "詳細";
+        pendingDetailToggleBtn.classList.toggle("bg-blue-600", pendingDetailVisible);
+        pendingDetailToggleBtn.classList.toggle("text-white", pendingDetailVisible);
+        pendingDetailToggleBtn.classList.toggle("bg-slate-200", !pendingDetailVisible);
+        pendingDetailToggleBtn.classList.toggle("text-slate-700", !pendingDetailVisible);
+      }
+
+      function togglePendingAddForm() {
+        if (!pendingTableAvailable) return;
+        const willShow = pendingFormPanel.classList.contains("hidden");
+        if (willShow) {
+          pendingCurrentRowId = null;
+          pendingEditMode = false;
+          showPendingForm("add");
+          renderPendingTable();
+        } else {
+          resetPendingForm();
+        }
+      }
+
+      function togglePendingEditMode() {
+        if (!pendingTableAvailable) return;
+        pendingEditMode = !pendingEditMode;
+        if (!pendingFormPanel.classList.contains("hidden")) {
+          clearPendingForm();
+          pendingFormPanel.classList.add("hidden");
+          pendingFormTitle.textContent = "追加 / 編集";
+          pendingSaveBtn.textContent = "追加する";
+        }
+        renderPendingTable();
+      }
+
+      function showPendingForm(mode) {
+        pendingFormPanel.classList.remove("hidden");
+        if (mode === "edit") {
+          pendingFormTitle.textContent = "編集";
+          pendingSaveBtn.textContent = "更新する";
+        } else {
+          clearPendingForm();
+          pendingFormTitle.textContent = "追加";
+          pendingSaveBtn.textContent = "追加する";
+        }
+        pendingFormPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function clearPendingForm() {
+        pendingItemNameEl.value = "";
+        pendingItemKindEl.value = "expense";
+        pendingItemAmountEl.value = "";
+        pendingCurrentRowId = null;
+      }
+
+      function resetPendingForm() {
+        clearPendingForm();
+        pendingFormPanel.classList.add("hidden");
+        pendingFormTitle.textContent = "追加 / 編集";
+        pendingSaveBtn.textContent = "追加する";
+        pendingEditMode = false;
+        renderPendingTable();
+      }
+
+      function fillPendingForm(row) {
+        pendingItemNameEl.value = row.itemName || "";
+        pendingItemKindEl.value = row.kind || "expense";
+        pendingItemAmountEl.value = row.amount || 0;
+        pendingCurrentRowId = row.id;
+        showPendingForm("edit");
+      }
+
+      function getPendingRowId(row) {
+        return row?.id ?? null;
+      }
+
+      function handlePendingTableClick(event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+
+        const action = button.getAttribute("data-action");
+        const rowId = button.getAttribute("data-id");
+        const row = pendingItems.find((item) => String(getPendingRowId(item)) === String(rowId));
+        if (!row) return;
+
+        if (action === "edit") {
+          fillPendingForm(row);
+        } else if (action === "delete") {
+          deletePendingRow(row);
+        }
+      }
+
+      async function savePendingItem() {
+        if (!pendingTableAvailable) return;
+
+        const payload = {
+          item_name: pendingItemNameEl.value.trim(),
+          kind: pendingItemKindEl.value,
+          amount: parseAmount(pendingItemAmountEl.value)
+        };
+
+        if (!payload.item_name || !payload.kind || payload.amount < 0) {
+          return;
+        }
+
+        try {
+          let result;
+          if (pendingCurrentRowId) {
+            result = await supabaseClient.from(PENDING_TABLE).update(payload).eq("id", pendingCurrentRowId).select();
+          } else {
+            result = await supabaseClient.from(PENDING_TABLE).insert([payload]).select();
+          }
+
+          if (result.error) {
+            throw new Error(result.error.message || "暫定項目の保存に失敗しました。");
+          }
+
+          resetPendingForm();
+          await reloadPendingItems();
+          render();
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || "暫定項目の保存に失敗しました。", true);
+        }
+      }
+
+      async function deletePendingRow(row) {
+        if (!pendingTableAvailable) return;
+        if (!confirm("この行を削除しますか？")) return;
+
+        try {
+          const rowId = getPendingRowId(row);
+          const { error } = await supabaseClient.from(PENDING_TABLE).delete().eq("id", rowId);
+          if (error) {
+            throw new Error(error.message || "暫定項目の削除に失敗しました。");
+          }
+
+          pendingEditMode = false;
+          await reloadPendingItems();
+          render();
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || "暫定項目の削除に失敗しました。", true);
+        }
+      }
+
+      async function reloadPendingItems() {
+        if (!pendingTableAvailable) return;
+        const { data, error } = await supabaseClient
+          .from(PENDING_TABLE)
+          .select("id, item_name, kind, amount")
+          .order("id", { ascending: true });
+
+        if (error) {
+          throw new Error(error.message || "暫定項目の再読み込みに失敗しました。");
+        }
+
+        pendingItems = (data || []).map((row) => ({
+          id: row.id,
+          itemName: row.item_name || "",
+          kind: row.kind === "income" ? "income" : "expense",
+          amount: parseAmount(row.amount)
+        }));
+        renderPendingPanel();
+      }
+
+      function renderPendingPanel() {
+        renderPendingSummary(getPendingTotals());
+        renderPendingTable();
+        pendingAddBtn.disabled = !pendingTableAvailable;
+        pendingEditBtn.disabled = !pendingTableAvailable;
+        pendingAddBtn.classList.toggle("opacity-50", !pendingTableAvailable);
+        pendingEditBtn.classList.toggle("opacity-50", !pendingTableAvailable);
+      }
+
+      function renderPendingTable() {
+        if (!pendingTableAvailable) {
+          pendingTableContainer.innerHTML = "<p class='rounded-xl border border-amber-400/40 bg-amber-900/20 px-4 py-3 text-sm text-amber-100'>savings_pending_items テーブルを作成すると暫定項目を管理できます。</p>";
+          return;
+        }
+
+        if (!pendingItems.length) {
+          pendingTableContainer.innerHTML = "<p class='rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm text-slate-300'>暫定項目はまだありません。</p>";
+          return;
+        }
+
+        const headers = ["項目名", "種別", "金額"];
+        if (pendingEditMode) headers.push("操作");
+        const headerHtml = headers.map((label) => `<th class=\"border px-3 py-2 bg-slate-100 text-left text-blue-800 whitespace-nowrap\">${label}</th>`).join("");
+
+        const rowsHtml = pendingItems.map((row) => {
+          const actionCell = pendingEditMode ? `<td class=\"border px-3 py-2 align-top\">
+              <div class=\"flex gap-2 w-full\">
+                <button data-action=\"edit\" data-id=\"${row.id}\" class=\"flex-1 rounded bg-amber-500 px-2 py-1 text-xs text-white hover:bg-amber-600\">編集</button>
+                <button data-action=\"delete\" data-id=\"${row.id}\" class=\"flex-1 rounded bg-rose-500 px-2 py-1 text-xs text-white hover:bg-rose-600\">削除</button>
+              </div>
+            </td>` : "";
+          return `<tr>
+            <td class=\"border px-3 py-2 align-top whitespace-nowrap\">${escapeHtml(row.itemName)}</td>
+            <td class=\"border px-3 py-2 align-top whitespace-nowrap\">${row.kind === "income" ? "収入" : "支出"}</td>
+            <td class=\"border px-3 py-2 align-top whitespace-nowrap text-right\">${formatCurrency(row.amount)}</td>
+            ${actionCell}
+          </tr>`;
+        }).join("");
+
+        pendingTableContainer.innerHTML = `<div class="rounded-xl border border-slate-200 overflow-x-auto">
+          <table class="w-full min-w-[520px] table-fixed text-sm">
+            <thead><tr>${headerHtml}</tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+    </script>
+  </body>
+
+  </html>

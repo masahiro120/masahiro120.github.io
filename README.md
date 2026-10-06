@@ -35,6 +35,9 @@
 		- `monsters.csv`
 		- `output.txt`
 		- `monsters_list/`（ランク別 CSV）
+	- `darts/`
+		- `darts.html`（カウントアップの入力・分析。Supabase の `darts_games` / `darts_throws` を使用）
+		- `darts_supabase.sql`（テーブル・RLS・保存用関数の定義）
 	- `quadratic_function/`
 		- `quadratic.html`
 		- `quadratic_old.html`

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/icon.png">
+  <title>ダーツ練習記録</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .dartboard {
+      display: block;
+      width: 100%;
+      max-width: 520px;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .dartboard-input {
+      cursor: crosshair;
+    }
+
+    .darts-light-control {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    .darts-chart-frame {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .darts-chart-frame canvas {
+      display: block;
+      max-width: 100%;
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body space-y-6">
+        <div class="section-title section-title-inline">
+          <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">ダーツ練習記録</h1>
+          <a href="/index.html" class="back-button back-button-inline">戻る</a>
+        </div>
+
+        <div id="status" class="rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200">データを読み込み中...</div>
+
+        <!-- 入力 -->
+        <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+          <div class="mb-4">
+            <h2 class="text-lg font-bold text-white">カウントアップ入力</h2>
+            <p class="text-sm text-slate-300">刺さった場所をボード上でタップしてください。ボードの外側をタップするとボード外（0点）になります。</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div>
+              <svg id="input-board" class="dartboard dartboard-input" viewBox="-200 -200 400 400" aria-label="入力用ダーツボード"></svg>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                  <p class="text-xs text-slate-300">ラウンド</p>
+                  <p id="current-round" class="mt-1 text-xl font-black text-white">1 / 8</p>
+                </div>
+                <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                  <p class="text-xs text-slate-300">本目</p>
+                  <p id="current-dart" class="mt-1 text-xl font-black text-white">1 / 3</p>
+                </div>
+                <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                  <p class="text-xs text-slate-300">ラウンド点</p>
+                  <p id="round-score" class="mt-1 text-xl font-black text-white">0</p>
+                </div>
+                <div class="rounded-xl border border-amber-400/40 bg-amber-900/20 p-3">
+                  <p class="text-xs text-slate-200">合計</p>
+                  <p id="total-score" class="mt-1 text-xl font-black text-amber-200">0</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2">
+                <button id="undo-btn" class="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">1本戻す</button>
+                <button id="miss-btn" class="rounded-lg bg-slate-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">ボード外</button>
+                <button id="reset-btn" class="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40">リセット</button>
+              </div>
+              <p class="text-xs text-slate-400">「ボード外」ボタンは、刺さらず落ちた場合など位置がわからないときに使います。</p>
+
+              <div class="overflow-x-auto rounded-xl border border-slate-700">
+                <table class="table table-sm text-slate-200">
+                  <thead>
+                    <tr class="text-slate-300">
+                      <th>R</th>
+                      <th>1本目</th>
+                      <th>2本目</th>
+                      <th>3本目</th>
+                      <th class="text-right">合計</th>
+                    </tr>
+                  </thead>
+                  <tbody id="throws-table"></tbody>
+                </table>
+              </div>
+
+              <div id="save-panel" class="hidden space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p class="font-semibold">8ラウンド終了。保存しますか？</p>
+                <div>
+                  <label for="note" class="mb-2 block text-sm font-semibold text-slate-700">意識したこと</label>
+                  <textarea id="note" rows="2" class="darts-light-control textarea textarea-bordered w-full" placeholder="例: フォロースルーをブルで止める"></textarea>
+                </div>
+                <button id="save-btn" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-40">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分析 -->
+        <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white">分析</h2>
+              <p class="text-sm text-slate-300">保存したゲームの刺さった位置と集計です。</p>
+            </div>
+            <div class="flex items-end gap-2">
+              <div>
+                <label for="range-mode" class="mb-1 block text-xs font-semibold text-slate-300">対象</label>
+                <select id="range-mode" class="select select-bordered select-sm bg-slate-100 text-slate-900">
+                  <option value="1">最新ゲーム</option>
+                  <option value="5" selected>直近5ゲーム</option>
+                  <option value="10">直近10ゲーム</option>
+                  <option value="all">全期間</option>
+                </select>
+              </div>
+              <button id="refresh-btn" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">更新</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">平均スコア</p>
+              <p id="stat-average" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">ブル</p>
+              <p id="stat-bull" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">ボード外</p>
+              <p id="stat-out" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">右下（6・10・15・2）</p>
+              <p id="stat-lower-right" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">平均のずれ</p>
+              <p id="stat-offset" class="mt-1 text-lg font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">ブルからの平均距離</p>
+              <p id="stat-distance" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div>
+              <h3 class="mb-2 text-sm font-bold text-white">刺さった位置 <span id="plot-caption" class="font-normal text-slate-300"></span></h3>
+              <svg id="analysis-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="刺さった位置のプロット"></svg>
+              <p class="mt-2 text-xs text-slate-400">緑の点が1本ずつの位置、ピンクの×が平均の位置です。</p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <h3 class="mb-2 text-sm font-bold text-white">スコア推移</h3>
+                <div class="darts-chart-frame relative h-56">
+                  <canvas id="score-chart"></canvas>
+                </div>
+              </div>
+              <div class="overflow-x-auto rounded-xl border border-slate-700">
+                <table class="table table-sm text-slate-200">
+                  <thead>
+                    <tr class="text-slate-300">
+                      <th>日時</th>
+                      <th class="text-right">スコア</th>
+                      <th>意識したこと</th>
+                    </tr>
+                  </thead>
+                  <tbody id="games-table"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+    const GAMES_TABLE = "darts_games";
+    const THROWS_TABLE = "darts_throws";
+    const SAVE_FUNCTION = "save_darts_game";
+    const STORAGE_KEY = "darts.countup.inProgress";
+    const PAGE_SIZE = 1000;
+
+    const supabaseClient = window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+
+    // ボードの寸法（mm、ソフトダーツ相当の比率）とナンバーの並び（真上から時計回り）
+    const BOARD = { innerBull: 6.35, outerBull: 15.9, tripleIn: 99, tripleOut: 107, doubleIn: 162, doubleOut: 170 };
+    const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+    const LOWER_RIGHT_NUMBERS = [6, 10, 15, 2];
+    // DARTSLIVE 風の配色（シングルは黒/白、ダブル・トリプルは赤/青）
+    const BOARD_COLORS = { black: "#1a1a1a", white: "#f4f4f5", red: "#d7263d", blue: "#1e63d6" };
+    // 入力・分析の点はボードに無い色にして見分けやすくする
+    const MARKER_COLORS = { current: "#facc15", past: "#22c55e" };
+    const ROUNDS = 8;
+    const DARTS_PER_ROUND = 3;
+    const TOTAL_DARTS = ROUNDS * DARTS_PER_ROUND;
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const statusEl = document.getElementById("status");
+    const inputBoardEl = document.getElementById("input-board");
+    const analysisBoardEl = document.getElementById("analysis-board");
+    const currentRoundEl = document.getElementById("current-round");
+    const currentDartEl = document.getElementById("current-dart");
+    const roundScoreEl = document.getElementById("round-score");
+    const totalScoreEl = document.getElementById("total-score");
+    const undoBtn = document.getElementById("undo-btn");
+    const missBtn = document.getElementById("miss-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const throwsTableEl = document.getElementById("throws-table");
+    const savePanel = document.getElementById("save-panel");
+    const noteEl = document.getElementById("note");
+    const saveBtn = document.getElementById("save-btn");
+    const rangeModeEl = document.getElementById("range-mode");
+    const refreshBtn = document.getElementById("refresh-btn");
+    const plotCaptionEl = document.getElementById("plot-caption");
+    const gamesTableEl = document.getElementById("games-table");
+    const scoreChartEl = document.getElementById("score-chart");
+
+    const statAverageEl = document.getElementById("stat-average");
+    const statBullEl = document.getElementById("stat-bull");
+    const statOutEl = document.getElementById("stat-out");
+    const statLowerRightEl = document.getElementById("stat-lower-right");
+    const statOffsetEl = document.getElementById("stat-offset");
+    const statDistanceEl = document.getElementById("stat-distance");
+
+    let throws = loadInProgress();
+    let games = [];
+    let scoreChart = null;
+    let inputMarkersLayer = null;
+    let analysisMarkersLayer = null;
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError
+        ? "rounded-lg bg-rose-900/50 px-4 py-3 text-sm text-rose-100"
+        : "rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // ---------- 途中のゲームはブラウザに一時保存 ----------
+
+    function loadInProgress() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        return Array.isArray(saved) ? saved.slice(0, TOTAL_DARTS) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveInProgress() {
+      try {
+        if (throws.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(throws));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (error) {
+        // 保存できなくても入力は続けられる
+      }
+    }
+
+    // ---------- 判定 ----------
+
+    // x: 右が正, y: 上が正（mm）。座標が無い場合はボード外扱い
+    function classifyThrow(x, y) {
+      if (x === null || y === null) {
+        return { number: null, ring: "OUT", score: 0 };
+      }
+      const distance = Math.hypot(x, y);
+      const angle = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+      const number = NUMBER_ORDER[Math.floor(((angle + 9) % 360) / 18)];
+
+      if (distance <= BOARD.outerBull) {
+        return { number: null, ring: distance <= BOARD.innerBull ? "IB" : "OB", score: 50 };
+      }
+      if (distance < BOARD.tripleIn) return { number, ring: "IS", score: number };
+      if (distance <= BOARD.tripleOut) return { number, ring: "T", score: number * 3 };
+      if (distance < BOARD.doubleIn) return { number, ring: "OS", score: number };
+      if (distance <= BOARD.doubleOut) return { number, ring: "D", score: number * 2 };
+      return { number, ring: "OUT", score: 0 };
+    }
+
+    function throwLabel(item) {
+      switch (item.ring) {
+        case "IB":
+        case "OB":
+          return "BULL";
+        case "T":
+          return `T${item.number}`;
+        case "D":
+          return `D${item.number}`;
+        case "OUT":
+          return "OUT";
+        default:
+          return String(item.number);
+      }
+    }
+
+    // ---------- ボードの描画 ----------
+
+    // 時計回り（真上が0°）の角度と半径を SVG 座標に変換
+    function polar(radius, degree) {
+      const rad = degree * Math.PI / 180;
+      return [radius * Math.sin(rad), -radius * Math.cos(rad)];
+    }
+
+    function svgEl(tag, attrs) {
+      const el = document.createElementNS(SVG_NS, tag);
+      Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+      return el;
+    }
+
+    function sectorPath(innerRadius, outerRadius, startDeg, endDeg) {
+      const [x1, y1] = polar(outerRadius, startDeg);
+      const [x2, y2] = polar(outerRadius, endDeg);
+      const [x3, y3] = polar(innerRadius, endDeg);
+      const [x4, y4] = polar(innerRadius, startDeg);
+      return `M${x1} ${y1} A${outerRadius} ${outerRadius} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
+    }
+
+    function drawBoard(svg) {
+      svg.innerHTML = "";
+      const wire = { stroke: "#94a3b8", "stroke-width": 0.6 };
+      svg.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 200, fill: "#0b0f19" }));
+
+      NUMBER_ORDER.forEach((number, index) => {
+        const start = index * 18 - 9;
+        const end = index * 18 + 9;
+        const single = index % 2 === 0 ? BOARD_COLORS.black : BOARD_COLORS.white;
+        const ring = index % 2 === 0 ? BOARD_COLORS.red : BOARD_COLORS.blue;
+        [
+          [BOARD.outerBull, BOARD.tripleIn, single],
+          [BOARD.tripleIn, BOARD.tripleOut, ring],
+          [BOARD.tripleOut, BOARD.doubleIn, single],
+          [BOARD.doubleIn, BOARD.doubleOut, ring]
+        ].forEach(([inner, outer, fill]) => {
+          svg.appendChild(svgEl("path", { d: sectorPath(inner, outer, start, end), fill, ...wire }));
+        });
+
+        const [tx, ty] = polar(185, index * 18);
+        const text = svgEl("text", {
+          x: tx, y: ty, fill: "#f8fafc", "font-size": 15, "font-weight": 700,
+          "text-anchor": "middle", "dominant-baseline": "central"
+        });
+        text.textContent = number;
+        svg.appendChild(text);
+      });
+
+      svg.appendChild(svgEl("circle", { cx: 0, cy: 0, r: BOARD.outerBull, fill: BOARD_COLORS.red, ...wire }));
+      svg.appendChild(svgEl("circle", { cx: 0, cy: 0, r: BOARD.innerBull, fill: BOARD_COLORS.black, ...wire }));
+
+      const markers = svgEl("g", {});
+      svg.appendChild(markers);
+      return markers;
+    }
+
+    // ---------- 入力 ----------
+
+    function addThrow(x, y) {
+      if (throws.length >= TOTAL_DARTS) return;
+      const index = throws.length;
+      throws.push({
+        round: Math.floor(index / DARTS_PER_ROUND) + 1,
+        dart: (index % DARTS_PER_ROUND) + 1,
+        x,
+        y,
+        ...classifyThrow(x, y)
+      });
+      saveInProgress();
+      renderInput();
+    }
+
+    inputBoardEl.addEventListener("click", (event) => {
+      const point = inputBoardEl.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const boardPoint = point.matrixTransform(inputBoardEl.getScreenCTM().inverse());
+      addThrow(Math.round(boardPoint.x * 10) / 10, Math.round(-boardPoint.y * 10) / 10);
+    });
+
+    missBtn.addEventListener("click", () => addThrow(null, null));
+
+    undoBtn.addEventListener("click", () => {
+      throws.pop();
+      saveInProgress();
+      renderInput();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (!throws.length || !confirm("入力中のゲームを消去しますか？")) return;
+      throws = [];
+      noteEl.value = "";
+      saveInProgress();
+      renderInput();
+    });
+
+    function renderInput() {
+      const finished = throws.length >= TOTAL_DARTS;
+      const nextIndex = Math.min(throws.length, TOTAL_DARTS - 1);
+      const currentRound = Math.floor(nextIndex / DARTS_PER_ROUND) + 1;
+      const total = throws.reduce((sum, item) => sum + item.score, 0);
+      const roundTotal = throws
+        .filter((item) => item.round === currentRound)
+        .reduce((sum, item) => sum + item.score, 0);
+
+      currentRoundEl.textContent = `${currentRound} / ${ROUNDS}`;
+      currentDartEl.textContent = finished ? "終了" : `${(nextIndex % DARTS_PER_ROUND) + 1} / ${DARTS_PER_ROUND}`;
+      roundScoreEl.textContent = roundTotal;
+      totalScoreEl.textContent = total;
+
+      undoBtn.disabled = !throws.length;
+      resetBtn.disabled = !throws.length;
+      missBtn.disabled = finished;
+      savePanel.classList.toggle("hidden", !finished);
+
+      // 今のラウンドは黄色、それ以前は緑で表示
+      inputMarkersLayer.innerHTML = "";
+      throws.forEach((item) => {
+        if (item.x === null) return;
+        const isCurrent = item.round === currentRound;
+        inputMarkersLayer.appendChild(svgEl("circle", {
+          cx: item.x, cy: -item.y, r: isCurrent ? 5 : 3.5,
+          fill: isCurrent ? MARKER_COLORS.current : MARKER_COLORS.past,
+          stroke: "#0b0f19", "stroke-width": 1.5
+        }));
+      });
+
+      throwsTableEl.innerHTML = Array.from({ length: ROUNDS }, (_, roundIndex) => {
+        const round = roundIndex + 1;
+        const roundThrows = throws.filter((item) => item.round === round);
+        const cells = Array.from({ length: DARTS_PER_ROUND }, (_, dartIndex) => {
+          const item = roundThrows[dartIndex];
+          return `<td>${item ? `${throwLabel(item)} <span class="text-slate-400">(${item.score})</span>` : ""}</td>`;
+        }).join("");
+        const sum = roundThrows.reduce((acc, item) => acc + item.score, 0);
+        const rowClass = round === currentRound && !finished ? "bg-slate-800/80" : "";
+        return `<tr class="${rowClass}"><td>${round}</td>${cells}<td class="text-right font-semibold">${roundThrows.length ? sum : ""}</td></tr>`;
+      }).join("");
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      if (!supabaseClient) {
+        setStatus("Supabaseクライアントを初期化できませんでした。", true);
+        return;
+      }
+      if (throws.length < TOTAL_DARTS) return;
+
+      saveBtn.disabled = true;
+      setStatus("保存中...");
+      const { error } = await supabaseClient.rpc(SAVE_FUNCTION, {
+        p_note: noteEl.value.trim(),
+        p_throws: throws
+      });
+      saveBtn.disabled = false;
+
+      if (error) {
+        setStatus(`保存に失敗しました: ${error.message}`, true);
+        return;
+      }
+
+      const total = throws.reduce((sum, item) => sum + item.score, 0);
+      throws = [];
+      noteEl.value = "";
+      saveInProgress();
+      renderInput();
+      setStatus(`保存しました（${total}点）。`);
+      await loadHistory();
+    });
+
+    // ---------- 分析 ----------
+
+    async function fetchAll(buildQuery) {
+      const rows = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < PAGE_SIZE) return rows;
+      }
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getMonth() + 1}/${date.getDate()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function formatRate(count, total) {
+      if (!total) return "-";
+      return `${count}/${total}本（${Math.round(count / total * 100)}%）`;
+    }
+
+    function describeOffset(meanX, meanY) {
+      const horizontal = Math.abs(meanX) < 1 ? "" : `${meanX > 0 ? "右" : "左"}${Math.round(Math.abs(meanX))}mm`;
+      const vertical = Math.abs(meanY) < 1 ? "" : `${meanY > 0 ? "上" : "下"}${Math.round(Math.abs(meanY))}mm`;
+      return [horizontal, vertical].filter(Boolean).join("・") || "ほぼ中心";
+    }
+
+    async function loadHistory() {
+      if (!supabaseClient) {
+        setStatus("Supabaseクライアントを初期化できませんでした。", true);
+        return;
+      }
+
+      try {
+        refreshBtn.disabled = true;
+        games = await fetchAll(() => supabaseClient
+          .from(GAMES_TABLE)
+          .select("id, played_at, total_score, note")
+          .order("played_at", { ascending: true }));
+
+        const mode = rangeModeEl.value;
+        const targetGames = mode === "all" ? games : games.slice(-Number(mode));
+        const targetIds = targetGames.map((game) => game.id);
+
+        let targetThrows = [];
+        if (targetIds.length) {
+          targetThrows = await fetchAll(() => {
+            const query = supabaseClient
+              .from(THROWS_TABLE)
+              .select("game_id, round, dart, x, y, number, ring, score")
+              .order("id", { ascending: true });
+            return mode === "all" ? query : query.in("game_id", targetIds);
+          });
+        }
+
+        renderAnalysis(targetGames, targetThrows);
+        renderScoreChart();
+        renderGamesTable();
+        if (!statusEl.textContent.startsWith("保存しました")) {
+          setStatus(games.length ? `${games.length}ゲームを読み込みました。` : "保存されたゲームはまだありません。");
+        }
+      } catch (error) {
+        setStatus(`読み込みに失敗しました: ${error.message}`, true);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    function renderAnalysis(targetGames, targetThrows) {
+      const count = targetThrows.length;
+      const average = targetGames.length
+        ? Math.round(targetGames.reduce((sum, game) => sum + game.total_score, 0) / targetGames.length)
+        : null;
+      const bullCount = targetThrows.filter((item) => item.ring === "IB" || item.ring === "OB").length;
+      const outCount = targetThrows.filter((item) => item.ring === "OUT").length;
+      const lowerRightCount = targetThrows.filter((item) => LOWER_RIGHT_NUMBERS.includes(item.number)).length;
+      const located = targetThrows.filter((item) => item.x !== null && item.y !== null);
+
+      statAverageEl.textContent = average === null ? "-" : `${average}点`;
+      statBullEl.textContent = formatRate(bullCount, count);
+      statOutEl.textContent = formatRate(outCount, count);
+      statLowerRightEl.textContent = formatRate(lowerRightCount, count);
+
+      analysisMarkersLayer.innerHTML = "";
+      if (located.length) {
+        const meanX = located.reduce((sum, item) => sum + item.x, 0) / located.length;
+        const meanY = located.reduce((sum, item) => sum + item.y, 0) / located.length;
+        const meanDistance = located.reduce((sum, item) => sum + Math.hypot(item.x, item.y), 0) / located.length;
+        statOffsetEl.textContent = describeOffset(meanX, meanY);
+        statDistanceEl.textContent = `${Math.round(meanDistance)}mm`;
+
+        located.forEach((item) => {
+          const dot = svgEl("circle", {
+            cx: item.x, cy: -item.y, r: 4,
+            fill: MARKER_COLORS.past, "fill-opacity": 0.8, stroke: "#0b0f19", "stroke-width": 1.5
+          });
+          const title = svgEl("title", {});
+          title.textContent = `R${item.round}-${item.dart}本目: ${throwLabel(item)}（${item.score}点）`;
+          dot.appendChild(title);
+          analysisMarkersLayer.appendChild(dot);
+        });
+
+        const size = 8;
+        const cross = svgEl("path", {
+          d: `M${meanX - size} ${-meanY - size} L${meanX + size} ${-meanY + size} M${meanX - size} ${-meanY + size} L${meanX + size} ${-meanY - size}`,
+          stroke: "#f472b6", "stroke-width": 3.5, "stroke-linecap": "round"
+        });
+        analysisMarkersLayer.appendChild(cross);
+      } else {
+        statOffsetEl.textContent = "-";
+        statDistanceEl.textContent = "-";
+      }
+
+      plotCaptionEl.textContent = targetGames.length ? `（${targetGames.length}ゲーム・${count}本）` : "";
+    }
+
+    function renderScoreChart() {
+      if (scoreChart) scoreChart.destroy();
+      scoreChart = new Chart(scoreChartEl, {
+        type: "line",
+        data: {
+          labels: games.map((game) => formatDateTime(game.played_at)),
+          datasets: [{
+            label: "スコア",
+            data: games.map((game) => game.total_score),
+            borderColor: "#60a5fa",
+            backgroundColor: "#60a5fa",
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "#94a3b8", maxRotation: 0, autoSkip: true }, grid: { display: false } },
+            y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(148, 163, 184, 0.15)" }, suggestedMin: 0 }
+          }
+        }
+      });
+    }
+
+    function renderGamesTable() {
+      if (!games.length) {
+        gamesTableEl.innerHTML = `<tr><td colspan="3" class="text-slate-400">まだ記録がありません。</td></tr>`;
+        return;
+      }
+      gamesTableEl.innerHTML = games.slice(-20).reverse().map((game) => `
+        <tr>
+          <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
+          <td class="text-right font-semibold">${game.total_score}</td>
+          <td>${escapeHtml(game.note || "")}</td>
+        </tr>`).join("");
+    }
+
+    rangeModeEl.addEventListener("change", loadHistory);
+    refreshBtn.addEventListener("click", loadHistory);
+
+    inputMarkersLayer = drawBoard(inputBoardEl);
+    analysisMarkersLayer = drawBoard(analysisBoardEl);
+    renderInput();
+    loadHistory();
+  </script>
+</body>
+
+</html>

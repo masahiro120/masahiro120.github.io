@@ -169,7 +169,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
             <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
               <p class="text-xs text-slate-300">平均スコア</p>
               <p id="stat-average" class="mt-1 text-xl font-black text-white">-</p>
@@ -191,10 +191,31 @@
               <p id="stat-offset" class="mt-1 text-lg font-black text-white">-</p>
             </div>
             <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">外れ幅（左右・上下）</p>
+              <p id="stat-abs" class="mt-1 text-lg font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
               <p class="text-xs text-slate-300">ブルからの平均距離</p>
               <p id="stat-distance" class="mt-1 text-xl font-black text-white">-</p>
             </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">ラウンド内のまとまり</p>
+              <p id="stat-grouping" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p class="text-xs text-slate-300">左右の行ったり来たり</p>
+              <p id="stat-flips" class="mt-1 text-xl font-black text-white">-</p>
+            </div>
           </div>
+          <details class="rounded-xl border border-slate-700 bg-slate-800/40 px-3 py-2 text-xs text-slate-300">
+            <summary class="cursor-pointer font-semibold text-slate-200">指標の見方</summary>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li><b>平均のずれ</b>：刺さった位置の平均。どちらに偏っているか（狙いや癖の向き）が分かります。左右に散ると打ち消し合って小さく見えます。</li>
+              <li><b>外れ幅</b>：1本ずつ、左右・上下に何mm外れたかを向きを無視して平均したもの。毎回どれくらい外れているかが分かります。</li>
+              <li><b>ラウンド内のまとまり</b>：同じラウンドの3本が、その3本の中心から平均何mm離れているか。小さいほど同じ所に集まっています。</li>
+              <li><b>左右の行ったり来たり</b>：同じラウンドで続けて投げた2本が、ブルの左右で反対側に行った回数。多いと、前の1本を見て直しすぎている可能性があります（ほぼ中央の投げは除外）。</li>
+            </ul>
+          </details>
 
           <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div>
@@ -270,7 +291,8 @@
                 </table>
               </div>
               <div>
-                <h3 class="mb-2 text-sm font-bold text-white">何本目ごとの比較</h3>
+                <h3 class="mb-1 text-sm font-bold text-white">何本目ごとの比較</h3>
+                <p class="mb-2 text-xs text-slate-400">上が平均のずれ、灰色の「幅」が外れ幅（左右・上下）です。距離はブルからの平均距離（mm）です。</p>
                 <div class="overflow-x-auto rounded-xl border border-slate-700">
                   <table class="compare-table table table-sm text-slate-200">
                     <thead>
@@ -278,7 +300,7 @@
                         <th></th>
                         <th><span class="compare-swatch-a">●</span> A のずれ</th>
                         <th><span class="compare-swatch-b">◆</span> B のずれ</th>
-                        <th>距離 A → B</th>
+                        <th>距離<br><span class="font-normal">A→B</span></th>
                       </tr>
                     </thead>
                     <tbody id="compare-dart-table"></tbody>
@@ -309,6 +331,8 @@
     const BOARD = { innerBull: 6.35, outerBull: 15.9, tripleIn: 99, tripleOut: 107, doubleIn: 162, doubleOut: 170 };
     const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
     const LOWER_RIGHT_NUMBERS = [6, 10, 15, 2];
+    // 左右の行ったり来たりを数えるとき、ブルの縦の線からこの距離（mm）以内の投げは除外する
+    const FLIP_CENTER_MARGIN = 15;
     // DARTSLIVE 風の配色（シングルは黒/白、ダブル・トリプルは赤/青）
     const BOARD_COLORS = { black: "#1a1a1a", white: "#f4f4f5", red: "#d7263d", blue: "#1e63d6" };
     // 入力・分析の点はボードに無い色にして見分けやすくする
@@ -346,6 +370,9 @@
     const statLowerRightEl = document.getElementById("stat-lower-right");
     const statOffsetEl = document.getElementById("stat-offset");
     const statDistanceEl = document.getElementById("stat-distance");
+    const statAbsEl = document.getElementById("stat-abs");
+    const statGroupingEl = document.getElementById("stat-grouping");
+    const statFlipsEl = document.getElementById("stat-flips");
 
     const compareAEl = document.getElementById("compare-a");
     const compareBEl = document.getElementById("compare-b");
@@ -633,6 +660,11 @@
       return `${count}/${total}本（${Math.round(count / total * 100)}%）`;
     }
 
+    function formatFlips(stats) {
+      if (!stats.flipPairs) return "-";
+      return `${stats.flips}/${stats.flipPairs}回`;
+    }
+
     function describeOffset(meanX, meanY, fallback = "ほぼ中心") {
       const horizontal = Math.abs(meanX) < 1 ? "" : `${meanX > 0 ? "右" : "左"}${Math.round(Math.abs(meanX))}mm`;
       const vertical = Math.abs(meanY) < 1 ? "" : `${meanY > 0 ? "上" : "下"}${Math.round(Math.abs(meanY))}mm`;
@@ -697,10 +729,43 @@
 
       const meanX = mean(located.map((item) => item.x));
       const meanY = mean(located.map((item) => item.y));
+
+      // 同じゲーム・同じラウンドの投げをまとめる（ラウンド内のまとまりと、続けて投げた2本の比較に使う）
+      const rounds = new Map();
+      located.forEach((item) => {
+        const key = `${item.game_id}-${item.round}`;
+        if (!rounds.has(key)) rounds.set(key, []);
+        rounds.get(key).push(item);
+      });
+      const groupDistances = [];
+      let flips = 0;
+      let flipPairs = 0;
+      rounds.forEach((roundItems) => {
+        if (roundItems.length < 2) return;
+        const centerX = mean(roundItems.map((item) => item.x));
+        const centerY = mean(roundItems.map((item) => item.y));
+        roundItems.forEach((item) => groupDistances.push(Math.hypot(item.x - centerX, item.y - centerY)));
+
+        const ordered = roundItems.slice().sort((a, b) => a.dart - b.dart);
+        ordered.slice(1).forEach((item, index) => {
+          const previous = ordered[index];
+          // ほぼ中央の投げは左右どちらとも言えないので数えない
+          if (Math.abs(previous.x) <= FLIP_CENTER_MARGIN || Math.abs(item.x) <= FLIP_CENTER_MARGIN) return;
+          flipPairs += 1;
+          if ((previous.x > 0) !== (item.x > 0)) flips += 1;
+        });
+      });
+
       return {
         ...stats,
         meanX,
         meanY,
+        // 平均のずれは左右に打ち消し合うので、向きを無視した「外れ幅」も出す
+        absX: mean(located.map((item) => Math.abs(item.x))),
+        absY: mean(located.map((item) => Math.abs(item.y))),
+        grouping: groupDistances.length ? mean(groupDistances) : null,
+        flips,
+        flipPairs,
         meanDistance: mean(located.map((item) => Math.hypot(item.x, item.y))),
         spreadX: Math.sqrt(mean(located.map((item) => (item.x - meanX) ** 2))),
         spreadY: Math.sqrt(mean(located.map((item) => (item.y - meanY) ** 2))),
@@ -741,8 +806,11 @@
       statBullEl.textContent = formatRate(stats.bull, stats.count);
       statOutEl.textContent = formatRate(stats.out, stats.count);
       statLowerRightEl.textContent = formatRate(stats.lowerRight, stats.count);
-      statOffsetEl.textContent = stats.located.length ? describeOffset(stats.meanX, stats.meanY) : "-";
+      statOffsetEl.innerHTML = stats.located.length ? offsetLines(stats.meanX, stats.meanY) : "-";
       statDistanceEl.textContent = stats.located.length ? `${Math.round(stats.meanDistance)}mm` : "-";
+      statAbsEl.innerHTML = stats.located.length ? `左右${Math.round(stats.absX)}mm<br>上下${Math.round(stats.absY)}mm` : "-";
+      statGroupingEl.textContent = stats.grouping === null || stats.grouping === undefined ? "-" : `${Math.round(stats.grouping)}mm`;
+      statFlipsEl.textContent = formatFlips(stats);
 
       analysisMarkersLayer.innerHTML = "";
       plotThrows(analysisMarkersLayer, targetThrows, MARKER_COLORS.past);
@@ -856,6 +924,14 @@
           hasA ? offsetLines(a.meanX, a.meanY) : "-",
           hasB ? offsetLines(b.meanX, b.meanY) : "-",
           both ? offsetLines(b.meanX - a.meanX, b.meanY - a.meanY, "ほぼ同じ") : "-"),
+        compareRow("外れ幅<br>左右",
+          hasA ? mm(a.absX) : "-",
+          hasB ? mm(b.absX) : "-",
+          both ? formatDiff(b.absX - a.absX, "mm") : "-"),
+        compareRow("外れ幅<br>上下",
+          hasA ? mm(a.absY) : "-",
+          hasB ? mm(b.absY) : "-",
+          both ? formatDiff(b.absY - a.absY, "mm") : "-"),
         compareRow("ブルからの<br>平均距離",
           hasA ? mm(a.meanDistance) : "-",
           hasB ? mm(b.meanDistance) : "-",
@@ -868,6 +944,15 @@
           hasA ? mm(a.spreadY) : "-",
           hasB ? mm(b.spreadY) : "-",
           both ? formatDiff(b.spreadY - a.spreadY, "mm") : "-"),
+        compareRow("ラウンド内の<br>まとまり",
+          hasA && a.grouping !== null ? mm(a.grouping) : "-",
+          hasB && b.grouping !== null ? mm(b.grouping) : "-",
+          both && a.grouping !== null && b.grouping !== null ? formatDiff(b.grouping - a.grouping, "mm") : "-"),
+        // 数えた組の数がゲームごとに違うので、回数ではなく割合の差で比べる
+        compareRow("左右の<br>行ったり来たり",
+          hasA && a.flipPairs ? rateLines(a.flips, a.flipPairs).replace("本", "回") : "-",
+          hasB && b.flipPairs ? rateLines(b.flips, b.flipPairs).replace("本", "回") : "-",
+          both && a.flipPairs && b.flipPairs ? formatDiff((b.flips / b.flipPairs - a.flips / a.flipPairs) * 100, "pt") : "-"),
         compareRow("ブルより<br>下",
           hasA ? rateLines(a.below, a.located.length) : "-",
           hasB ? rateLines(b.below, b.located.length) : "-",
@@ -879,10 +964,13 @@
         const dart = index + 1;
         const da = computeStats(throwsA.filter((item) => item.dart === dart));
         const db = computeStats(throwsB.filter((item) => item.dart === dart));
-        const offsetA = da.located.length ? offsetLines(da.meanX, da.meanY) : "-";
-        const offsetB = db.located.length ? offsetLines(db.meanX, db.meanY) : "-";
+        const offsetCell = (stats) => stats.located.length
+          ? `${offsetLines(stats.meanX, stats.meanY)}<br><span class="text-xs text-slate-400">幅 ${Math.round(stats.absX)}・${Math.round(stats.absY)}mm</span>`
+          : "-";
+        const offsetA = offsetCell(da);
+        const offsetB = offsetCell(db);
         const distance = da.located.length && db.located.length
-          ? `${Math.round(da.meanDistance)}→${mm(db.meanDistance)}<br><span class="text-xs text-slate-400">${formatDiff(db.meanDistance - da.meanDistance, "mm")}</span>`
+          ? `${Math.round(da.meanDistance)}→${Math.round(db.meanDistance)}<br><span class="text-xs text-slate-400">${formatDiff(db.meanDistance - da.meanDistance)}</span>`
           : "-";
         return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${dart}本目</th><td class="whitespace-nowrap">${offsetA}</td><td class="whitespace-nowrap">${offsetB}</td><td class="whitespace-nowrap">${distance}</td></tr>`;
       }).join("");

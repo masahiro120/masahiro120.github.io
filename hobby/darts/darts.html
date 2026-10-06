@@ -226,7 +226,11 @@
             </div>
             <div class="space-y-4">
               <div>
-                <h3 class="mb-2 text-sm font-bold text-white">スコア推移</h3>
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="text-sm font-bold text-white">推移</h3>
+                  <select id="trend-metric" class="select select-bordered select-sm bg-slate-100 text-slate-900" aria-label="推移グラフの指標"></select>
+                </div>
+                <p id="trend-caption" class="mb-2 text-xs text-slate-400"></p>
                 <div class="darts-chart-frame relative h-56">
                   <canvas id="score-chart"></canvas>
                 </div>
@@ -323,6 +327,7 @@
     const THROWS_TABLE = "darts_throws";
     const SAVE_FUNCTION = "save_darts_game";
     const STORAGE_KEY = "darts.countup.inProgress";
+    const TREND_METRIC_KEY = "darts.trendMetric";
     const PAGE_SIZE = 1000;
 
     const supabaseClient = window.supabase && typeof window.supabase.createClient === "function"
@@ -364,6 +369,8 @@
     const plotCaptionEl = document.getElementById("plot-caption");
     const gamesTableEl = document.getElementById("games-table");
     const scoreChartEl = document.getElementById("score-chart");
+    const trendMetricEl = document.getElementById("trend-metric");
+    const trendCaptionEl = document.getElementById("trend-caption");
 
     const statAverageEl = document.getElementById("stat-average");
     const statBullEl = document.getElementById("stat-bull");
@@ -694,19 +701,22 @@
         const targetGames = mode === "all" ? games : games.slice(-Number(mode));
         const targetIds = targetGames.map((game) => game.id);
 
-        let targetThrows = [];
-        if (targetIds.length) {
-          targetThrows = await fetchAll(() => {
-            const query = supabaseClient
-              .from(THROWS_TABLE)
-              .select("game_id, round, dart, x, y, number, ring, score")
-              .order("id", { ascending: true });
-            return mode === "all" ? query : query.in("game_id", targetIds);
-          });
-        }
+        // 推移グラフでゲームごとの指標を出すため、全ゲームの投げをまとめて取得する（1ゲーム24本なので軽い）
+        const allThrows = games.length
+          ? await fetchAll(() => supabaseClient
+            .from(THROWS_TABLE)
+            .select("game_id, round, dart, x, y, number, ring, score")
+            .order("id", { ascending: true }))
+          : [];
+        throwsByGame.clear();
+        games.forEach((game) => throwsByGame.set(game.id, []));
+        allThrows.forEach((row) => {
+          if (throwsByGame.has(row.game_id)) throwsByGame.get(row.game_id).push(row);
+        });
+        const targetThrows = targetIds.flatMap((id) => throwsByGame.get(id) || []);
 
         renderAnalysis(targetGames, targetThrows);
-        renderScoreChart();
+        renderTrendChart();
         renderGamesTable();
         renderCompareOptions();
         await loadComparison();
@@ -990,20 +1000,59 @@
       }).join("");
     }
 
-    function renderScoreChart() {
+    // 推移グラフで選べる指標。value はゲームとその集計から値を返す（出せない場合は null）
+    const TREND_METRICS = {
+      score: { label: "スコア", unit: "点", digits: 0, value: (game) => game.total_score },
+      stats: { label: "スタッツ", unit: "", digits: 2, value: (game) => game.total_score / ROUNDS },
+      distance: { label: "ブルからの平均距離", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => (stats.located.length ? stats.meanDistance : null) },
+      grouping: { label: "ラウンド内のまとまり", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.grouping ?? null },
+      absX: { label: "外れ幅（横）", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.absX ?? null },
+      absY: { label: "外れ幅（縦）", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.absY ?? null },
+      devX: { label: "ブレ幅（横）", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.devX ?? null },
+      devY: { label: "ブレ幅（縦）", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.devY ?? null },
+      meanX: { label: "平均のずれ（横）", unit: "mm", digits: 0, signed: true, caption: "プラスが右、マイナスが左。0 に近いほど偏りがありません。", value: (game, stats) => stats.meanX ?? null },
+      meanY: { label: "平均のずれ（縦）", unit: "mm", digits: 0, signed: true, caption: "プラスが上、マイナスが下。0 に近いほど偏りがありません。", value: (game, stats) => stats.meanY ?? null },
+      bull: { label: "ブル", unit: "本", digits: 0, value: (game, stats) => stats.bull },
+      flips: { label: "左右の行ったり来たり", unit: "%", digits: 0, lowerIsBetter: true, value: (game, stats) => (stats.flipPairs ? stats.flips / stats.flipPairs * 100 : null) }
+    };
+
+    function initTrendMetricOptions() {
+      trendMetricEl.innerHTML = Object.entries(TREND_METRICS)
+        .map(([key, metric]) => `<option value="${key}">${metric.label}</option>`)
+        .join("");
+      let saved = null;
+      try {
+        saved = localStorage.getItem(TREND_METRIC_KEY);
+      } catch (error) {
+        // 保存できない環境ではスコアから表示する
+      }
+      trendMetricEl.value = TREND_METRICS[saved] ? saved : "score";
+    }
+
+    function renderTrendChart() {
+      const metric = TREND_METRICS[trendMetricEl.value] || TREND_METRICS.score;
+      const values = games.map((game) => {
+        const value = metric.value(game, computeStats(throwsByGame.get(game.id) || []));
+        return value === null || value === undefined ? null : Number(value.toFixed(metric.digits));
+      });
+      const formatValue = (value) => `${metric.signed && value > 0 ? "+" : ""}${value.toFixed(metric.digits)}${metric.unit}`;
+
+      trendCaptionEl.textContent = metric.caption || (metric.lowerIsBetter ? "低いほど良い指標です。" : "");
+
       if (scoreChart) scoreChart.destroy();
       scoreChart = new Chart(scoreChartEl, {
         type: "line",
         data: {
           labels: games.map((game) => formatDateTime(game.played_at)),
           datasets: [{
-            label: "スコア",
-            data: games.map((game) => game.total_score),
+            label: metric.label,
+            data: values,
             borderColor: "#60a5fa",
             backgroundColor: "#60a5fa",
             borderWidth: 2,
             pointRadius: 4,
             pointHoverRadius: 6,
+            spanGaps: true,
             tension: 0
           }]
         },
@@ -1011,10 +1060,25 @@
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => `#${games[items[0].dataIndex].id}　${items[0].label}`,
+                label: (item) => `${metric.label}: ${formatValue(item.parsed.y)}`
+              }
+            }
+          },
           scales: {
             x: { ticks: { color: "#94a3b8", maxRotation: 0, autoSkip: true }, grid: { display: false } },
-            y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(148, 163, 184, 0.15)" }, suggestedMin: 0 }
+            y: {
+              ticks: { color: "#94a3b8", callback: (value) => `${value}${metric.unit}` },
+              // 符号付きの指標は 0 の線を目立たせる
+              grid: { color: (context) => (metric.signed && context.tick.value === 0 ? "rgba(148, 163, 184, 0.6)" : "rgba(148, 163, 184, 0.15)") },
+              // どの指標も 0 を範囲に含める（符号付きの指標で全部マイナスでも 0 の線が見えるように）
+              suggestedMin: 0,
+              suggestedMax: metric.signed ? 0 : undefined
+            }
           }
         }
       });
@@ -1036,6 +1100,14 @@
     }
 
     rangeModeEl.addEventListener("change", loadHistory);
+    trendMetricEl.addEventListener("change", () => {
+      try {
+        localStorage.setItem(TREND_METRIC_KEY, trendMetricEl.value);
+      } catch (error) {
+        // 保存できなくても表示は切り替わる
+      }
+      renderTrendChart();
+    });
     compareAEl.addEventListener("change", loadComparison);
     compareBEl.addEventListener("change", loadComparison);
     compareSwapBtn.addEventListener("click", () => {
@@ -1047,6 +1119,7 @@
     inputMarkersLayer = drawBoard(inputBoardEl);
     analysisMarkersLayer = drawBoard(analysisBoardEl);
     compareMarkersLayer = drawBoard(compareBoardEl);
+    initTrendMetricOptions();
     renderInput();
     loadHistory();
   </script>

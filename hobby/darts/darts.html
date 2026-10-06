@@ -32,6 +32,23 @@
       color: #0f172a !important;
     }
 
+    .compare-swatch-a {
+      color: #c46c06;
+    }
+
+    .compare-swatch-b {
+      color: #b06df5;
+    }
+
+    @media (max-width: 640px) {
+
+      .compare-table th,
+      .compare-table td {
+        padding: 0.4rem 0.4rem;
+        font-size: 0.8rem;
+      }
+    }
+
     .darts-chart-frame {
       max-width: 100%;
       overflow: hidden;
@@ -199,6 +216,69 @@
             </div>
           </div>
         </div>
+
+        <!-- ゲーム比較 -->
+        <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">ゲーム比較</h2>
+            <p class="text-sm text-slate-300">2つのゲームを選んで、刺さった位置と集計を比べます。差は「B − A」です。</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+            <div>
+              <label for="compare-a" class="mb-1 block text-xs font-semibold text-slate-300"><span class="compare-swatch-a">●</span> ゲームA</label>
+              <select id="compare-a" class="select select-bordered select-sm w-full bg-slate-100 text-slate-900"></select>
+            </div>
+            <button id="compare-swap-btn" class="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700" aria-label="AとBを入れ替え">
+              <i class="fa-solid fa-right-left"></i>
+            </button>
+            <div>
+              <label for="compare-b" class="mb-1 block text-xs font-semibold text-slate-300"><span class="compare-swatch-b">◆</span> ゲームB</label>
+              <select id="compare-b" class="select select-bordered select-sm w-full bg-slate-100 text-slate-900"></select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div>
+              <svg id="compare-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="2ゲームの刺さった位置の比較"></svg>
+              <p class="mt-2 text-xs text-slate-400">
+                <span class="compare-swatch-a">●</span> ゲームA　<span class="compare-swatch-b">◆</span> ゲームB　× はそれぞれの平均の位置です。
+              </p>
+            </div>
+            <div class="space-y-4">
+              <div id="compare-notes" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+              <div class="overflow-x-auto rounded-xl border border-slate-700">
+                <table class="compare-table table table-sm text-slate-200">
+                  <thead>
+                    <tr class="text-slate-300">
+                      <th>項目</th>
+                      <th><span class="compare-swatch-a">●</span> A</th>
+                      <th><span class="compare-swatch-b">◆</span> B</th>
+                      <th>差</th>
+                    </tr>
+                  </thead>
+                  <tbody id="compare-table"></tbody>
+                </table>
+              </div>
+              <div>
+                <h3 class="mb-2 text-sm font-bold text-white">何本目ごとの比較</h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-700">
+                  <table class="compare-table table table-sm text-slate-200">
+                    <thead>
+                      <tr class="text-slate-300">
+                        <th></th>
+                        <th><span class="compare-swatch-a">●</span> A のずれ</th>
+                        <th><span class="compare-swatch-b">◆</span> B のずれ</th>
+                        <th>距離 A → B</th>
+                      </tr>
+                    </thead>
+                    <tbody id="compare-dart-table"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -224,6 +304,8 @@
     const BOARD_COLORS = { black: "#1a1a1a", white: "#f4f4f5", red: "#d7263d", blue: "#1e63d6" };
     // 入力・分析の点はボードに無い色にして見分けやすくする
     const MARKER_COLORS = { current: "#facc15", past: "#22c55e" };
+    // 比較の2ゲーム（色覚の違いでも見分けられる組み合わせ。形も丸とひし形で分ける）
+    const COMPARE_COLORS = { a: "#c46c06", b: "#b06df5" };
     const ROUNDS = 8;
     const DARTS_PER_ROUND = 3;
     const TOTAL_DARTS = ROUNDS * DARTS_PER_ROUND;
@@ -256,11 +338,22 @@
     const statOffsetEl = document.getElementById("stat-offset");
     const statDistanceEl = document.getElementById("stat-distance");
 
+    const compareAEl = document.getElementById("compare-a");
+    const compareBEl = document.getElementById("compare-b");
+    const compareSwapBtn = document.getElementById("compare-swap-btn");
+    const compareBoardEl = document.getElementById("compare-board");
+    const compareNotesEl = document.getElementById("compare-notes");
+    const compareTableEl = document.getElementById("compare-table");
+    const compareDartTableEl = document.getElementById("compare-dart-table");
+
     let throws = loadInProgress();
     let games = [];
     let scoreChart = null;
     let inputMarkersLayer = null;
     let analysisMarkersLayer = null;
+    let compareMarkersLayer = null;
+    // ゲームIDごとの投げのキャッシュ（比較で同じゲームを何度も取得しないため）
+    const throwsByGame = new Map();
 
     function setStatus(message, isError = false) {
       statusEl.textContent = message;
@@ -531,10 +624,10 @@
       return `${count}/${total}本（${Math.round(count / total * 100)}%）`;
     }
 
-    function describeOffset(meanX, meanY) {
+    function describeOffset(meanX, meanY, fallback = "ほぼ中心") {
       const horizontal = Math.abs(meanX) < 1 ? "" : `${meanX > 0 ? "右" : "左"}${Math.round(Math.abs(meanX))}mm`;
       const vertical = Math.abs(meanY) < 1 ? "" : `${meanY > 0 ? "上" : "下"}${Math.round(Math.abs(meanY))}mm`;
-      return [horizontal, vertical].filter(Boolean).join("・") || "ほぼ中心";
+      return [horizontal, vertical].filter(Boolean).join("・") || fallback;
     }
 
     async function loadHistory() {
@@ -568,6 +661,8 @@
         renderAnalysis(targetGames, targetThrows);
         renderScoreChart();
         renderGamesTable();
+        renderCompareOptions();
+        await loadComparison();
         if (!statusEl.textContent.startsWith("保存しました")) {
           setStatus(games.length ? `${games.length}ゲームを読み込みました。` : "保存されたゲームはまだありません。");
         }
@@ -578,52 +673,210 @@
       }
     }
 
+    function computeStats(items) {
+      const located = items.filter((item) => item.x !== null && item.y !== null);
+      const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+      const stats = {
+        count: items.length,
+        score: items.reduce((sum, item) => sum + item.score, 0),
+        bull: items.filter((item) => item.ring === "IB" || item.ring === "OB").length,
+        out: items.filter((item) => item.ring === "OUT").length,
+        lowerRight: items.filter((item) => LOWER_RIGHT_NUMBERS.includes(item.number)).length,
+        located
+      };
+      if (!located.length) return stats;
+
+      const meanX = mean(located.map((item) => item.x));
+      const meanY = mean(located.map((item) => item.y));
+      return {
+        ...stats,
+        meanX,
+        meanY,
+        meanDistance: mean(located.map((item) => Math.hypot(item.x, item.y))),
+        spreadX: Math.sqrt(mean(located.map((item) => (item.x - meanX) ** 2))),
+        spreadY: Math.sqrt(mean(located.map((item) => (item.y - meanY) ** 2))),
+        below: located.filter((item) => item.y < 0).length
+      };
+    }
+
+    // 1本ずつの点を描く（shape: "circle" または "diamond"）
+    function plotThrows(layer, items, color, shape = "circle", label = "") {
+      items.forEach((item) => {
+        if (item.x === null || item.y === null) return;
+        const common = { fill: color, "fill-opacity": 0.85, stroke: "#0b0f19", "stroke-width": 1.5 };
+        const marker = shape === "diamond"
+          ? svgEl("path", { d: `M${item.x} ${-item.y - 5.5} L${item.x + 5.5} ${-item.y} L${item.x} ${-item.y + 5.5} L${item.x - 5.5} ${-item.y} Z`, ...common })
+          : svgEl("circle", { cx: item.x, cy: -item.y, r: 4, ...common });
+        const title = svgEl("title", {});
+        title.textContent = `${label}R${item.round}-${item.dart}本目: ${throwLabel(item)}（${item.score}点）`;
+        marker.appendChild(title);
+        layer.appendChild(marker);
+      });
+    }
+
+    // 平均の位置に×を描く。濃い縁取りで、どの色の区画の上でも見えるようにする
+    function plotMeanCross(layer, x, y, color) {
+      const size = 8;
+      const d = `M${x - size} ${-y - size} L${x + size} ${-y + size} M${x - size} ${-y + size} L${x + size} ${-y - size}`;
+      layer.appendChild(svgEl("path", { d, stroke: "#0b0f19", "stroke-width": 6, "stroke-linecap": "round" }));
+      layer.appendChild(svgEl("path", { d, stroke: color, "stroke-width": 3.5, "stroke-linecap": "round" }));
+    }
+
     function renderAnalysis(targetGames, targetThrows) {
-      const count = targetThrows.length;
+      const stats = computeStats(targetThrows);
       const average = targetGames.length
         ? Math.round(targetGames.reduce((sum, game) => sum + game.total_score, 0) / targetGames.length)
         : null;
-      const bullCount = targetThrows.filter((item) => item.ring === "IB" || item.ring === "OB").length;
-      const outCount = targetThrows.filter((item) => item.ring === "OUT").length;
-      const lowerRightCount = targetThrows.filter((item) => LOWER_RIGHT_NUMBERS.includes(item.number)).length;
-      const located = targetThrows.filter((item) => item.x !== null && item.y !== null);
 
       statAverageEl.textContent = average === null ? "-" : `${average}点`;
-      statBullEl.textContent = formatRate(bullCount, count);
-      statOutEl.textContent = formatRate(outCount, count);
-      statLowerRightEl.textContent = formatRate(lowerRightCount, count);
+      statBullEl.textContent = formatRate(stats.bull, stats.count);
+      statOutEl.textContent = formatRate(stats.out, stats.count);
+      statLowerRightEl.textContent = formatRate(stats.lowerRight, stats.count);
+      statOffsetEl.textContent = stats.located.length ? describeOffset(stats.meanX, stats.meanY) : "-";
+      statDistanceEl.textContent = stats.located.length ? `${Math.round(stats.meanDistance)}mm` : "-";
 
       analysisMarkersLayer.innerHTML = "";
-      if (located.length) {
-        const meanX = located.reduce((sum, item) => sum + item.x, 0) / located.length;
-        const meanY = located.reduce((sum, item) => sum + item.y, 0) / located.length;
-        const meanDistance = located.reduce((sum, item) => sum + Math.hypot(item.x, item.y), 0) / located.length;
-        statOffsetEl.textContent = describeOffset(meanX, meanY);
-        statDistanceEl.textContent = `${Math.round(meanDistance)}mm`;
+      plotThrows(analysisMarkersLayer, targetThrows, MARKER_COLORS.past);
+      if (stats.located.length) plotMeanCross(analysisMarkersLayer, stats.meanX, stats.meanY, "#f472b6");
 
-        located.forEach((item) => {
-          const dot = svgEl("circle", {
-            cx: item.x, cy: -item.y, r: 4,
-            fill: MARKER_COLORS.past, "fill-opacity": 0.8, stroke: "#0b0f19", "stroke-width": 1.5
-          });
-          const title = svgEl("title", {});
-          title.textContent = `R${item.round}-${item.dart}本目: ${throwLabel(item)}（${item.score}点）`;
-          dot.appendChild(title);
-          analysisMarkersLayer.appendChild(dot);
-        });
+      plotCaptionEl.textContent = targetGames.length ? `（${targetGames.length}ゲーム・${stats.count}本）` : "";
+    }
 
-        const size = 8;
-        const cross = svgEl("path", {
-          d: `M${meanX - size} ${-meanY - size} L${meanX + size} ${-meanY + size} M${meanX - size} ${-meanY + size} L${meanX + size} ${-meanY - size}`,
-          stroke: "#f472b6", "stroke-width": 3.5, "stroke-linecap": "round"
-        });
-        analysisMarkersLayer.appendChild(cross);
-      } else {
-        statOffsetEl.textContent = "-";
-        statDistanceEl.textContent = "-";
+    // ---------- ゲーム比較 ----------
+
+    function gameOptionLabel(game) {
+      return `#${game.id}　${formatDateTime(game.played_at)}　${game.total_score}点`;
+    }
+
+    function renderCompareOptions() {
+      const previousA = compareAEl.value;
+      const previousB = compareBEl.value;
+      const options = games.slice().reverse()
+        .map((game) => `<option value="${game.id}">${escapeHtml(gameOptionLabel(game))}</option>`)
+        .join("");
+      compareAEl.innerHTML = options;
+      compareBEl.innerHTML = options;
+
+      const ids = games.map((game) => String(game.id));
+      // 初期値は A = 1つ前のゲーム、B = 最新ゲーム
+      compareAEl.value = ids.includes(previousA) ? previousA : (ids[ids.length - 2] || ids[ids.length - 1] || "");
+      compareBEl.value = ids.includes(previousB) ? previousB : (ids[ids.length - 1] || "");
+    }
+
+    async function fetchThrowsForGames(gameIds) {
+      const missing = gameIds.filter((id) => !throwsByGame.has(id));
+      if (missing.length) {
+        const rows = await fetchAll(() => supabaseClient
+          .from(THROWS_TABLE)
+          .select("game_id, round, dart, x, y, number, ring, score")
+          .in("game_id", missing)
+          .order("id", { ascending: true }));
+        missing.forEach((id) => throwsByGame.set(id, []));
+        rows.forEach((row) => throwsByGame.get(row.game_id).push(row));
+      }
+      return gameIds.map((id) => throwsByGame.get(id));
+    }
+
+    function formatDiff(value, unit = "", digits = 0) {
+      if (value === null || Number.isNaN(value)) return "-";
+      const rounded = Number(value.toFixed(digits));
+      if (rounded === 0) return `±0${unit}`;
+      return `${rounded > 0 ? "+" : ""}${rounded}${unit}`;
+    }
+
+    // 比較表は列が細いので、ずれや割合を2行に分けて表示する
+    function offsetLines(x, y, fallback) {
+      return describeOffset(x, y, fallback).replace("・", "<br>");
+    }
+
+    function rateLines(count, total) {
+      if (!total) return "-";
+      return `${count}/${total}本<br><span class="text-xs text-slate-400">${Math.round(count / total * 100)}%</span>`;
+    }
+
+    function compareRow(label, a, b, diff = "") {
+      return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${label}</th><td class="whitespace-nowrap">${a}</td><td class="whitespace-nowrap">${b}</td><td class="whitespace-nowrap">${diff}</td></tr>`;
+    }
+
+    async function loadComparison() {
+      compareMarkersLayer.innerHTML = "";
+      const gameA = games.find((game) => String(game.id) === compareAEl.value);
+      const gameB = games.find((game) => String(game.id) === compareBEl.value);
+      if (!gameA || !gameB) {
+        compareNotesEl.innerHTML = "";
+        compareTableEl.innerHTML = `<tr><td colspan="4" class="text-slate-400">比較するゲームがありません。</td></tr>`;
+        compareDartTableEl.innerHTML = "";
+        return;
       }
 
-      plotCaptionEl.textContent = targetGames.length ? `（${targetGames.length}ゲーム・${count}本）` : "";
+      try {
+        const [throwsA, throwsB] = await fetchThrowsForGames([gameA.id, gameB.id]);
+        renderComparison(gameA, throwsA, gameB, throwsB);
+      } catch (error) {
+        setStatus(`比較データの読み込みに失敗しました: ${error.message}`, true);
+      }
+    }
+
+    function renderComparison(gameA, throwsA, gameB, throwsB) {
+      const a = computeStats(throwsA);
+      const b = computeStats(throwsB);
+      const hasA = a.located.length > 0;
+      const hasB = b.located.length > 0;
+      const both = hasA && hasB;
+      const mm = (value) => `${Math.round(value)}mm`;
+
+      compareMarkersLayer.innerHTML = "";
+      plotThrows(compareMarkersLayer, throwsA, COMPARE_COLORS.a, "circle", "A ");
+      plotThrows(compareMarkersLayer, throwsB, COMPARE_COLORS.b, "diamond", "B ");
+      if (hasA) plotMeanCross(compareMarkersLayer, a.meanX, a.meanY, COMPARE_COLORS.a);
+      if (hasB) plotMeanCross(compareMarkersLayer, b.meanX, b.meanY, COMPARE_COLORS.b);
+
+      compareNotesEl.innerHTML = [["A", "●", "compare-swatch-a", gameA], ["B", "◆", "compare-swatch-b", gameB]]
+        .map(([name, mark, swatch, game]) => `
+          <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+            <p class="text-xs text-slate-300"><span class="${swatch}">${mark}</span> ${name}：${escapeHtml(gameOptionLabel(game))}</p>
+            <p class="mt-1 whitespace-pre-line text-sm text-slate-100">${escapeHtml(game.note || "（メモなし）")}</p>
+          </div>`).join("");
+
+      const rows = [
+        compareRow("スコア", `${gameA.total_score}点`, `${gameB.total_score}点`, formatDiff(gameB.total_score - gameA.total_score, "点")),
+        compareRow("ブル", rateLines(a.bull, a.count), rateLines(b.bull, b.count), formatDiff(b.bull - a.bull, "本")),
+        compareRow("ボード外", rateLines(a.out, a.count), rateLines(b.out, b.count), formatDiff(b.out - a.out, "本")),
+        compareRow(`右下<br><span class="text-xs font-normal text-slate-400">6・10・15・2</span>`, rateLines(a.lowerRight, a.count), rateLines(b.lowerRight, b.count), formatDiff(b.lowerRight - a.lowerRight, "本")),
+        compareRow("平均のずれ",
+          hasA ? offsetLines(a.meanX, a.meanY) : "-",
+          hasB ? offsetLines(b.meanX, b.meanY) : "-",
+          both ? offsetLines(b.meanX - a.meanX, b.meanY - a.meanY, "ほぼ同じ") : "-"),
+        compareRow("ブルからの<br>平均距離",
+          hasA ? mm(a.meanDistance) : "-",
+          hasB ? mm(b.meanDistance) : "-",
+          both ? formatDiff(b.meanDistance - a.meanDistance, "mm") : "-"),
+        compareRow("散らばり<br>左右",
+          hasA ? mm(a.spreadX) : "-",
+          hasB ? mm(b.spreadX) : "-",
+          both ? formatDiff(b.spreadX - a.spreadX, "mm") : "-"),
+        compareRow("散らばり<br>上下",
+          hasA ? mm(a.spreadY) : "-",
+          hasB ? mm(b.spreadY) : "-",
+          both ? formatDiff(b.spreadY - a.spreadY, "mm") : "-"),
+        compareRow("ブルより<br>下",
+          hasA ? rateLines(a.below, a.located.length) : "-",
+          hasB ? rateLines(b.below, b.located.length) : "-",
+          both ? formatDiff(b.below - a.below, "本") : "-")
+      ];
+      compareTableEl.innerHTML = rows.join("");
+
+      compareDartTableEl.innerHTML = Array.from({ length: DARTS_PER_ROUND }, (_, index) => {
+        const dart = index + 1;
+        const da = computeStats(throwsA.filter((item) => item.dart === dart));
+        const db = computeStats(throwsB.filter((item) => item.dart === dart));
+        const offsetA = da.located.length ? offsetLines(da.meanX, da.meanY) : "-";
+        const offsetB = db.located.length ? offsetLines(db.meanX, db.meanY) : "-";
+        const distance = da.located.length && db.located.length
+          ? `${Math.round(da.meanDistance)}→${mm(db.meanDistance)}<br><span class="text-xs text-slate-400">${formatDiff(db.meanDistance - da.meanDistance, "mm")}</span>`
+          : "-";
+        return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${dart}本目</th><td class="whitespace-nowrap">${offsetA}</td><td class="whitespace-nowrap">${offsetB}</td><td class="whitespace-nowrap">${distance}</td></tr>`;
+      }).join("");
     }
 
     function renderScoreChart() {
@@ -670,10 +923,17 @@
     }
 
     rangeModeEl.addEventListener("change", loadHistory);
+    compareAEl.addEventListener("change", loadComparison);
+    compareBEl.addEventListener("change", loadComparison);
+    compareSwapBtn.addEventListener("click", () => {
+      [compareAEl.value, compareBEl.value] = [compareBEl.value, compareAEl.value];
+      loadComparison();
+    });
     refreshBtn.addEventListener("click", loadHistory);
 
     inputMarkersLayer = drawBoard(inputBoardEl);
     analysisMarkersLayer = drawBoard(analysisBoardEl);
+    compareMarkersLayer = drawBoard(compareBoardEl);
     renderInput();
     loadHistory();
   </script>

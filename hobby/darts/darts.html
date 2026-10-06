@@ -229,8 +229,9 @@
               <label for="compare-a" class="mb-1 block text-xs font-semibold text-slate-300"><span class="compare-swatch-a">●</span> ゲームA</label>
               <select id="compare-a" class="select select-bordered select-sm w-full bg-slate-100 text-slate-900"></select>
             </div>
-            <button id="compare-swap-btn" class="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700" aria-label="AとBを入れ替え">
-              <i class="fa-solid fa-right-left"></i>
+            <!-- 縦並び（スマホ）では小さな上下矢印、横並びでは左右矢印 -->
+            <button id="compare-swap-btn" class="justify-self-center rounded-full bg-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 sm:justify-self-auto sm:rounded-lg sm:py-2" aria-label="AとBを入れ替え" title="AとBを入れ替え">
+              <i class="fa-solid fa-right-left rotate-90 sm:rotate-0"></i>
             </button>
             <div>
               <label for="compare-b" class="mb-1 block text-xs font-semibold text-slate-300"><span class="compare-swatch-b">◆</span> ゲームB</label>

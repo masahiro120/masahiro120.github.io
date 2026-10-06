@@ -810,13 +810,13 @@
 
       statAverageEl.innerHTML = average === null
         ? "-"
-        : `${Math.round(average)}点<span class="block text-sm font-semibold text-slate-300">スタッツ ${formatStats(average)}</span>`;
+        : `${Math.round(average)}点<span class="inline-block whitespace-nowrap text-sm font-semibold text-slate-300 ml-2 max-sm:ml-0 max-sm:block">スタッツ ${formatStats(average)}</span>`;
       statBullEl.textContent = formatRate(stats.bull, stats.count);
       statOutEl.textContent = formatRate(stats.out, stats.count);
       statOffsetEl.innerHTML = stats.located.length ? offsetLines(stats.meanX, stats.meanY) : "-";
       statDistanceEl.textContent = stats.located.length ? `${Math.round(stats.meanDistance)}mm` : "-";
-      statAbsEl.innerHTML = stats.located.length ? `横${Math.round(stats.absX)}mm<br>縦${Math.round(stats.absY)}mm` : "-";
-      statDevEl.innerHTML = stats.located.length ? `横${Math.round(stats.devX)}mm<br>縦${Math.round(stats.devY)}mm` : "-";
+      statAbsEl.innerHTML = stats.located.length ? wrapParts([`横${Math.round(stats.absX)}mm`, `縦${Math.round(stats.absY)}mm`]) : "-";
+      statDevEl.innerHTML = stats.located.length ? wrapParts([`横${Math.round(stats.devX)}mm`, `縦${Math.round(stats.devY)}mm`]) : "-";
       statGroupingEl.textContent = stats.grouping === null || stats.grouping === undefined ? "-" : `${Math.round(stats.grouping)}mm`;
       statFlipsEl.textContent = formatFlips(stats);
 
@@ -870,8 +870,15 @@
     }
 
     // 比較表は列が細いので、ずれや割合を2行に分けて表示する
+    // 横幅に余裕があれば1行、狭ければ値の切れ目で折り返して2行にする
+    function wrapParts(parts) {
+      return parts
+        .map((part, index) => `<span class="inline-block whitespace-nowrap${index < parts.length - 1 ? " mr-1.5" : ""}">${part}</span>`)
+        .join("");
+    }
+
     function offsetLines(x, y, fallback) {
-      return describeOffset(x, y, fallback).replace("・", "<br>");
+      return wrapParts(describeOffset(x, y, fallback).split("・"));
     }
 
     function rateLines(count, total) {
@@ -880,7 +887,7 @@
     }
 
     function compareRow(label, a, b, diff = "") {
-      return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${label}</th><td class="whitespace-nowrap">${a}</td><td class="whitespace-nowrap">${b}</td><td class="whitespace-nowrap">${diff}</td></tr>`;
+      return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${label}</th><td>${a}</td><td>${b}</td><td>${diff}</td></tr>`;
     }
 
     async function loadComparison() {
@@ -956,7 +963,7 @@
           hasB && b.grouping !== null ? mm(b.grouping) : "-",
           both && a.grouping !== null && b.grouping !== null ? formatDiff(b.grouping - a.grouping, "mm") : "-"),
         // 数えた組の数がゲームごとに違うので、回数ではなく割合の差で比べる
-        compareRow("左右の<br>行ったり来たり",
+        compareRow("左右の<br>行ったり<br>来たり",
           hasA && a.flipPairs ? rateLines(a.flips, a.flipPairs).replace("本", "回") : "-",
           hasB && b.flipPairs ? rateLines(b.flips, b.flipPairs).replace("本", "回") : "-",
           both && a.flipPairs && b.flipPairs ? formatDiff((b.flips / b.flipPairs - a.flips / a.flipPairs) * 100, "pt") : "-"),
@@ -972,14 +979,14 @@
         const da = computeStats(throwsA.filter((item) => item.dart === dart));
         const db = computeStats(throwsB.filter((item) => item.dart === dart));
         const offsetCell = (stats) => stats.located.length
-          ? `${offsetLines(stats.meanX, stats.meanY)}<br><span class="text-xs text-slate-400">幅 ${Math.round(stats.absX)}・${Math.round(stats.absY)}mm</span>`
+          ? `${offsetLines(stats.meanX, stats.meanY)}<br><span class="whitespace-nowrap text-xs text-slate-400">幅 ${Math.round(stats.absX)}・${Math.round(stats.absY)}mm</span>`
           : "-";
         const offsetA = offsetCell(da);
         const offsetB = offsetCell(db);
         const distance = da.located.length && db.located.length
           ? `${Math.round(da.meanDistance)}→${Math.round(db.meanDistance)}<br><span class="text-xs text-slate-400">${formatDiff(db.meanDistance - da.meanDistance)}</span>`
           : "-";
-        return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${dart}本目</th><td class="whitespace-nowrap">${offsetA}</td><td class="whitespace-nowrap">${offsetB}</td><td class="whitespace-nowrap">${distance}</td></tr>`;
+        return `<tr><th class="whitespace-nowrap font-semibold text-slate-300">${dart}本目</th><td>${offsetA}</td><td>${offsetB}</td><td class="whitespace-nowrap">${distance}</td></tr>`;
       }).join("");
     }
 

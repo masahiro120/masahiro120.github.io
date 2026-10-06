@@ -131,8 +131,9 @@
               <div id="save-panel" class="hidden space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                 <p class="font-semibold">8ラウンド終了。保存しますか？</p>
                 <div>
-                  <label for="note" class="mb-2 block text-sm font-semibold text-slate-700">意識したこと</label>
-                  <textarea id="note" rows="2" class="darts-light-control textarea textarea-bordered w-full" placeholder="例: フォロースルーをブルで止める"></textarea>
+                  <label for="note" class="mb-1 block text-sm font-semibold text-slate-700">メモ</label>
+                  <p class="mb-2 text-xs text-slate-500">意識したこと、投げてみて思ったこと・気づいたこと、体調など自由に書いてください。</p>
+                  <textarea id="note" rows="4" class="darts-light-control textarea textarea-bordered w-full" placeholder="例:&#10;意識：投げる前に毎回体勢を直してから&#10;感想：後半は少し急いでしまった"></textarea>
                 </div>
                 <button id="save-btn" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-40">保存</button>
               </div>
@@ -207,7 +208,7 @@
                     <tr class="text-slate-300">
                       <th>日時</th>
                       <th class="text-right">スコア</th>
-                      <th>意識したこと</th>
+                      <th>メモ</th>
                     </tr>
                   </thead>
                   <tbody id="games-table"></tbody>
@@ -919,7 +920,7 @@
         <tr>
           <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
           <td class="text-right font-semibold">${game.total_score}</td>
-          <td>${escapeHtml(game.note || "")}</td>
+          <td class="whitespace-pre-line">${escapeHtml(game.note || "")}</td>
         </tr>`).join("");
     }
 

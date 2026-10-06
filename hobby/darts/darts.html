@@ -183,7 +183,7 @@
               <p id="stat-out" class="mt-1 text-xl font-black text-white">-</p>
             </div>
             <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
-              <p class="text-xs text-slate-300">右下（6・10・15・2）</p>
+              <p id="stat-lower-right-label" class="text-xs text-slate-300">右下</p>
               <p id="stat-lower-right" class="mt-1 text-xl font-black text-white">-</p>
             </div>
             <div class="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
@@ -330,7 +330,8 @@
     // ボードの寸法（mm、ソフトダーツ相当の比率）とナンバーの並び（真上から時計回り）
     const BOARD = { innerBull: 6.35, outerBull: 15.9, tripleIn: 99, tripleOut: 107, doubleIn: 162, doubleOut: 170 };
     const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
-    const LOWER_RIGHT_NUMBERS = [6, 10, 15, 2];
+    const LOWER_RIGHT_NUMBERS = [10, 15, 2, 17];
+    const LOWER_RIGHT_LABEL = LOWER_RIGHT_NUMBERS.join("・");
     // 左右の行ったり来たりを数えるとき、ブルの縦の線からこの距離（mm）以内の投げは除外する
     const FLIP_CENTER_MARGIN = 15;
     // DARTSLIVE 風の配色（シングルは黒/白、ダブル・トリプルは赤/青）
@@ -919,7 +920,7 @@
         compareRow("スコア", `${gameA.total_score}点`, `${gameB.total_score}点`, formatDiff(gameB.total_score - gameA.total_score, "点")),
         compareRow("ブル", rateLines(a.bull, a.count), rateLines(b.bull, b.count), formatDiff(b.bull - a.bull, "本")),
         compareRow("ボード外", rateLines(a.out, a.count), rateLines(b.out, b.count), formatDiff(b.out - a.out, "本")),
-        compareRow(`右下<br><span class="text-xs font-normal text-slate-400">6・10・15・2</span>`, rateLines(a.lowerRight, a.count), rateLines(b.lowerRight, b.count), formatDiff(b.lowerRight - a.lowerRight, "本")),
+        compareRow(`右下<br><span class="text-xs font-normal text-slate-400">${LOWER_RIGHT_LABEL}</span>`, rateLines(a.lowerRight, a.count), rateLines(b.lowerRight, b.count), formatDiff(b.lowerRight - a.lowerRight, "本")),
         compareRow("平均のずれ",
           hasA ? offsetLines(a.meanX, a.meanY) : "-",
           hasB ? offsetLines(b.meanX, b.meanY) : "-",
@@ -1029,6 +1030,7 @@
     });
     refreshBtn.addEventListener("click", loadHistory);
 
+    document.getElementById("stat-lower-right-label").textContent = `右下（${LOWER_RIGHT_LABEL}）`;
     inputMarkersLayer = drawBoard(inputBoardEl);
     analysisMarkersLayer = drawBoard(analysisBoardEl);
     compareMarkersLayer = drawBoard(compareBoardEl);

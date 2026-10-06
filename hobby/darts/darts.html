@@ -800,10 +800,13 @@
     function renderAnalysis(targetGames, targetThrows) {
       const stats = computeStats(targetThrows);
       const average = targetGames.length
-        ? Math.round(targetGames.reduce((sum, game) => sum + game.total_score, 0) / targetGames.length)
+        ? targetGames.reduce((sum, game) => sum + game.total_score, 0) / targetGames.length
         : null;
 
-      statAverageEl.textContent = average === null ? "-" : `${average}点`;
+      // スタッツは DARTSLIVE と同じく1ラウンドあたりの平均点（PPR）
+      statAverageEl.innerHTML = average === null
+        ? "-"
+        : `${Math.round(average)}点<span class="block text-sm font-semibold text-slate-300">スタッツ ${(average / ROUNDS).toFixed(2)}</span>`;
       statBullEl.textContent = formatRate(stats.bull, stats.count);
       statOutEl.textContent = formatRate(stats.out, stats.count);
       statLowerRightEl.textContent = formatRate(stats.lowerRight, stats.count);

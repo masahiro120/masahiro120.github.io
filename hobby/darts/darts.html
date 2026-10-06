@@ -923,11 +923,12 @@
         gamesTableEl.innerHTML = `<tr><td colspan="3" class="text-slate-400">まだ記録がありません。</td></tr>`;
         return;
       }
+      // メモは改行を「／」にして1行にまとめ、行が縦に伸びないようにする（長いメモは表を横スクロールして読む）
       gamesTableEl.innerHTML = games.slice(-20).reverse().map((game) => `
         <tr>
           <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
           <td class="text-right font-semibold">${game.total_score}</td>
-          <td class="whitespace-pre-line">${escapeHtml(game.note || "")}</td>
+          <td class="whitespace-nowrap">${escapeHtml((game.note || "").replace(/\s*\n\s*/g, " ／ "))}</td>
         </tr>`).join("");
     }
 

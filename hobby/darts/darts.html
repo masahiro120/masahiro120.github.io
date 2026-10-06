@@ -32,6 +32,13 @@
       color: #0f172a !important;
     }
 
+    /* daisyUI の textarea は line-height: 2 で、iPhone ではカーソルが文字の倍の高さになるため詰める。
+       16px 未満だと iPhone は入力時に画面を拡大するので 16px にする */
+    textarea.darts-light-control {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
     .compare-swatch-a {
       color: #c46c06;
     }

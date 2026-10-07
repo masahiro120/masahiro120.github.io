@@ -56,6 +56,11 @@
       }
     }
 
+    /* 固定した見出しの背景を表の背景に合わせる */
+    .games-table-frame thead tr {
+      background: #172033;
+    }
+
     .darts-chart-frame {
       max-width: 100%;
       overflow: hidden;
@@ -235,8 +240,9 @@
                   <canvas id="score-chart"></canvas>
                 </div>
               </div>
-              <div class="overflow-x-auto rounded-xl border border-slate-700">
-                <table class="table table-sm text-slate-200">
+              <!-- 約10ゲーム分の高さで止め、それより前のゲームは縦スクロールで見る（見出しは固定） -->
+              <div class="games-table-frame max-h-[25rem] overflow-auto rounded-xl border border-slate-700">
+                <table class="table table-sm table-pin-rows text-slate-200">
                   <thead>
                     <tr class="text-slate-300">
                       <th>日時</th>
@@ -1092,7 +1098,7 @@
         return;
       }
       // メモは改行を「／」にして1行にまとめ、行が縦に伸びないようにする（長いメモは表を横スクロールして読む）
-      gamesTableEl.innerHTML = games.slice(-20).reverse().map((game) => `
+      gamesTableEl.innerHTML = games.slice().reverse().map((game) => `
         <tr>
           <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
           <td class="text-right font-semibold">${game.total_score}</td>

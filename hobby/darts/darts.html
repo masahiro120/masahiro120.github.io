@@ -642,7 +642,8 @@
       saveInProgress();
       renderInput();
       setStatus(`保存しました（${total}点）。`);
-      await loadHistory();
+      // 保存直後は、比較を「1つ前のゲーム（A）」と「今保存したゲーム（B）」にする
+      await loadHistory({ compareLatest: true });
     });
 
     // ---------- 分析 ----------
@@ -684,7 +685,8 @@
       return [horizontal, vertical].filter(Boolean).join("・") || fallback;
     }
 
-    async function loadHistory() {
+    // options.compareLatest: true なら、比較の選択を最新2ゲームに戻す（イベントから呼ばれたときは Event が渡るので無視される）
+    async function loadHistory(options = {}) {
       if (!supabaseClient) {
         setStatus("Supabaseクライアントを初期化できませんでした。", true);
         return;
@@ -718,7 +720,7 @@
         renderAnalysis(targetGames, targetThrows);
         renderTrendChart();
         renderGamesTable();
-        renderCompareOptions();
+        renderCompareOptions(options.compareLatest === true);
         await loadComparison();
         if (!statusEl.textContent.startsWith("保存しました")) {
           setStatus(games.length ? `${games.length}ゲームを読み込みました。` : "保存されたゲームはまだありません。");
@@ -843,9 +845,9 @@
       return `#${game.id}　${formatDateTime(game.played_at)}　${game.total_score}点`;
     }
 
-    function renderCompareOptions() {
-      const previousA = compareAEl.value;
-      const previousB = compareBEl.value;
+    function renderCompareOptions(useLatest = false) {
+      const previousA = useLatest ? "" : compareAEl.value;
+      const previousB = useLatest ? "" : compareBEl.value;
       const options = games.slice().reverse()
         .map((game) => `<option value="${game.id}">${escapeHtml(gameOptionLabel(game))}</option>`)
         .join("");
@@ -853,7 +855,7 @@
       compareBEl.innerHTML = options;
 
       const ids = games.map((game) => String(game.id));
-      // 初期値は A = 1つ前のゲーム、B = 最新ゲーム
+      // 初期値（と保存直後）は A = 1つ前のゲーム、B = 最新ゲーム。それ以外は選んでいたゲームを保つ
       compareAEl.value = ids.includes(previousA) ? previousA : (ids[ids.length - 2] || ids[ids.length - 1] || "");
       compareBEl.value = ids.includes(previousB) ? previousB : (ids[ids.length - 1] || "");
     }

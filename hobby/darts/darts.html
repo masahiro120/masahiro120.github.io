@@ -125,7 +125,7 @@
               </div>
               <p class="text-xs text-slate-400">「ボード外」ボタンは、刺さらず落ちた場合など位置がわからないときに使います。</p>
 
-              <div class="overflow-x-auto rounded-xl border border-slate-700">
+              <div class="overflow-x-auto overscroll-none rounded-xl border border-slate-700">
                 <table class="table table-sm text-slate-200">
                   <thead>
                     <tr class="text-slate-300">
@@ -240,8 +240,9 @@
                   <canvas id="score-chart"></canvas>
                 </div>
               </div>
-              <!-- 約10ゲーム分の高さで止め、それより前のゲームは縦スクロールで見る（見出しは固定） -->
-              <div class="games-table-frame max-h-[25rem] overflow-auto rounded-xl border border-slate-700">
+              <!-- 約10ゲーム分の高さで止め、それより前のゲームは縦スクロールで見る（見出しは固定）。
+                   overscroll-none で、iPhone で端まで来たときに引っ張っても空白が出ないようにする -->
+              <div class="games-table-frame max-h-[25rem] overflow-auto overscroll-none rounded-xl border border-slate-700">
                 <table class="table table-sm table-pin-rows text-slate-200">
                   <thead>
                     <tr class="text-slate-300">
@@ -289,7 +290,7 @@
             </div>
             <div class="space-y-4">
               <div id="compare-notes" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
-              <div class="overflow-x-auto rounded-xl border border-slate-700">
+              <div class="overflow-x-auto overscroll-none rounded-xl border border-slate-700">
                 <table class="compare-table table table-sm text-slate-200">
                   <thead>
                     <tr class="text-slate-300">
@@ -305,7 +306,7 @@
               <div>
                 <h3 class="mb-1 text-sm font-bold text-white">何本目ごとの比較</h3>
                 <p class="mb-2 text-xs text-slate-400">上が平均のずれ、灰色の「幅」が外れ幅（横・縦）です。距離はブルからの平均距離（mm）です。</p>
-                <div class="overflow-x-auto rounded-xl border border-slate-700">
+                <div class="overflow-x-auto overscroll-none rounded-xl border border-slate-700">
                   <table class="compare-table table table-sm text-slate-200">
                     <thead>
                       <tr class="text-slate-300">

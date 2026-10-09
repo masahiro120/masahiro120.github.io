@@ -40,11 +40,11 @@
     }
 
     .compare-swatch-a {
-      color: #c46c06;
+      color: #facc15;
     }
 
     .compare-swatch-b {
-      color: #b06df5;
+      color: #e879f9;
     }
 
     @media (max-width: 640px) {
@@ -350,8 +350,8 @@
     const BOARD_COLORS = { black: "#1a1a1a", white: "#f4f4f5", red: "#d7263d", blue: "#1e63d6" };
     // 入力・分析の点はボードに無い色にして見分けやすくする
     const MARKER_COLORS = { current: "#facc15", past: "#22c55e" };
-    // 比較の2ゲーム（色覚の違いでも見分けられる組み合わせ。形も丸とひし形で分ける）
-    const COMPARE_COLORS = { a: "#c46c06", b: "#b06df5" };
+    // 比較の2ゲーム。ボードの黒・白・赤・青と紛れない黄色とピンクにし、色覚の違いでも見分けられることを確認済み。形も丸とひし形で分ける
+    const COMPARE_COLORS = { a: "#facc15", b: "#e879f9" };
     const ROUNDS = 8;
     const DARTS_PER_ROUND = 3;
     const TOTAL_DARTS = ROUNDS * DARTS_PER_ROUND;

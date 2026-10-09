@@ -348,6 +348,8 @@
     const SAVE_FUNCTION = "save_darts_game";
     const STORAGE_KEY = "darts.countup.inProgress";
     const TREND_METRIC_KEY = "darts.trendMetric";
+    // 推移グラフの線の色（2本描くときは青とオレンジ。色覚の違いでも見分けられることを確認済み）
+    const TREND_SERIES_COLORS = ["#3b82f6", "#d97706"];
     const INPUT_TARGET_KEY = "darts.inputTarget";
     const PAGE_SIZE = 1000;
 
@@ -1179,9 +1181,15 @@
       devY: { label: "ブレ幅（縦）", unit: "mm", digits: 0, lowerIsBetter: true, value: (game, stats) => stats.devY ?? null },
       meanX: { label: "平均のずれ（横）", unit: "mm", digits: 0, signed: true, caption: "プラスが右、マイナスが左。0 に近いほど偏りがありません。", value: (game, stats) => stats.meanX ?? null },
       meanY: { label: "平均のずれ（縦）", unit: "mm", digits: 0, signed: true, caption: "プラスが上、マイナスが下。0 に近いほど偏りがありません。", value: (game, stats) => stats.meanY ?? null },
-      // キーは以前の「ブル」と同じ bull のまま（ブラウザに覚えた選択を引き継ぐため）
-      bull: { label: "的中", unit: "本", digits: 0, value: (game, stats) => stats.hit },
-      numberHit: { label: "狙ったナンバー（トリプル狙い）", unit: "本", digits: 0, value: (game, stats) => stats.numberHit },
+      // キーは以前の「ブル」と同じ bull のまま（ブラウザに覚えた選択を引き継ぐため）。
+      // トリプル狙いのときは「狙ったナンバー」の線も同じグラフに描く（BULL 狙いでは値が無いので出ない）
+      bull: {
+        label: "的中", unit: "本", digits: 0,
+        series: [
+          { label: "的中", value: (game, stats) => stats.hit },
+          { label: "狙ったナンバー", value: (game, stats) => stats.numberHit }
+        ]
+      },
       flips: { label: "左右の行ったり来たり", unit: "%", digits: 0, lowerIsBetter: true, value: (game, stats) => (stats.flipPairs ? stats.flips / stats.flipPairs * 100 : null) }
     };
 
@@ -1202,10 +1210,22 @@
       const metric = TREND_METRICS[trendMetricEl.value] || TREND_METRICS.score;
       // 分析で選んだ狙いのゲームだけを並べる
       const trendGames = gamesForAnalysisTarget();
-      const values = trendGames.map((game) => {
-        const value = metric.value(game, computeStats(throwsByGame.get(game.id) || [], gameTarget(game)));
-        return value === null || value === undefined ? null : Number(value.toFixed(metric.digits));
-      });
+      const statsList = trendGames.map((game) => computeStats(throwsByGame.get(game.id) || [], gameTarget(game)));
+      const seriesList = metric.series || [{ label: metric.label, value: metric.value }];
+      const datasets = seriesList
+        .map((series, index) => {
+          const color = TREND_SERIES_COLORS[index];
+          const data = trendGames.map((game, gameIndex) => {
+            const value = series.value(game, statsList[gameIndex]);
+            return value === null || value === undefined ? null : Number(value.toFixed(metric.digits));
+          });
+          return {
+            label: series.label, data, borderColor: color, backgroundColor: color,
+            borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, spanGaps: true, tension: 0
+          };
+        })
+        // 値が1つも無い線（BULL 狙いの「狙ったナンバー」など）は出さない
+        .filter((dataset) => dataset.data.some((value) => value !== null));
       const formatValue = (value) => `${metric.signed && value > 0 ? "+" : ""}${value.toFixed(metric.digits)}${metric.unit}`;
 
       const metricCaption = metric.caption || (metric.lowerIsBetter ? "低いほど良い指標です。" : "");
@@ -1216,28 +1236,24 @@
         type: "line",
         data: {
           labels: trendGames.map((game) => formatDateTime(game.played_at)),
-          datasets: [{
-            label: metric.label,
-            data: values,
-            borderColor: "#60a5fa",
-            backgroundColor: "#60a5fa",
-            borderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            spanGaps: true,
-            tension: 0
-          }]
+          datasets
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
           plugins: {
-            legend: { display: false },
+            // 線が2本以上のときだけ凡例を出す
+            legend: {
+              display: datasets.length > 1,
+              position: "top",
+              align: "start",
+              labels: { color: "#cbd5e1", boxWidth: 12, boxHeight: 2 }
+            },
             tooltip: {
               callbacks: {
                 title: (items) => `#${trendGames[items[0].dataIndex].id}　${items[0].label}`,
-                label: (item) => `${metric.label}: ${formatValue(item.parsed.y)}`
+                label: (item) => `${item.dataset.label}: ${formatValue(item.parsed.y)}`
               }
             }
           },

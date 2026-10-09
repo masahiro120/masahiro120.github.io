@@ -239,7 +239,7 @@
             <div>
               <h3 class="mb-2 text-sm font-bold text-white">刺さった位置 <span id="plot-caption" class="font-normal text-slate-300"></span></h3>
               <svg id="analysis-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="刺さった位置のプロット"></svg>
-              <p class="mt-2 text-xs text-slate-400">緑の点が1本ずつの位置、ピンクの×が平均の位置、オレンジに塗った区画が狙った場所です。</p>
+              <p class="mt-2 text-xs text-slate-400">緑の点が1本ずつの位置、ピンクの×が平均の位置、明るい緑に塗った区画が狙った場所です。</p>
             </div>
             <div class="space-y-4">
               <div>
@@ -298,7 +298,7 @@
             <div>
               <svg id="compare-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="2ゲームの刺さった位置の比較"></svg>
               <p class="mt-2 text-xs text-slate-400">
-                <span class="compare-swatch-a">●</span> ゲームA　<span class="compare-swatch-b">◆</span> ゲームB　× はそれぞれの平均の位置、オレンジに塗った区画は狙った場所です。
+                <span class="compare-swatch-a">●</span> ゲームA　<span class="compare-swatch-b">◆</span> ゲームB　× はそれぞれの平均の位置、明るい緑に塗った区画は狙った場所です。
               </p>
             </div>
             <div class="space-y-4">
@@ -363,8 +363,8 @@
     const TARGETS = ["BULL", "T20", "T19", "T18", "T17", "T16", "T15"];
     // トリプルを狙うときの中心（トリプルのリングの真ん中）までの半径
     const TRIPLE_CENTER_RADIUS = 103;
-    // 狙った区画を塗る色（ボードの赤・青・黒・白や、投げの点の黄・緑・ピンクと紛れないオレンジ）
-    const TARGET_FILL_COLOR = "#f97316";
+    // 狙った区画を塗る色（明るめの緑。ボードの赤・青・黒・白と紛れず、投げの点の緑よりかなり明るくして区別する）
+    const TARGET_FILL_COLOR = "#86efac";
     // 左右の行ったり来たりを数えるとき、狙いの縦の線からこの距離（mm）以内の投げは除外する
     const FLIP_CENTER_MARGIN = 15;
     // DARTSLIVE 風の配色（シングルは黒/白、ダブル・トリプルは赤/青）
@@ -690,7 +690,7 @@
       missBtn.disabled = finished;
       savePanel.classList.toggle("hidden", !finished);
 
-      // 今のラウンドは黄色、それ以前は緑で表示。狙った区画はオレンジで塗る
+      // 今のラウンドは黄色、それ以前は緑で表示。狙った区画は明るい緑で塗る
       inputMarkersLayer.innerHTML = "";
       plotTarget(inputMarkersLayer, inputTarget);
       throws.forEach((item) => {

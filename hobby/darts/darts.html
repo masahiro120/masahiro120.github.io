@@ -259,7 +259,7 @@
                   <thead>
                     <tr class="text-slate-300">
                       <th>日時</th>
-                      <th>狙い</th>
+                      <th>No.</th>
                       <th class="text-right">スコア</th>
                       <th class="text-right">スタッツ</th>
                       <th>メモ</th>
@@ -276,7 +276,7 @@
         <div class="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-4">
           <div>
             <h2 class="text-lg font-bold text-white">ゲーム比較</h2>
-            <p class="text-sm text-slate-300">2つのゲームを選んで、刺さった位置と集計を比べます。差は「B − A」です。狙いが違うゲーム同士では、ずれや距離はそれぞれの狙いから測った値で比べます。</p>
+            <p class="text-sm text-slate-300">分析欄で選んでいる狙いのゲームから2つ選んで、刺さった位置と集計を比べます。差は「B − A」です。番号は狙いごとの通し番号です。</p>
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
@@ -801,7 +801,7 @@
 
       try {
         refreshBtn.disabled = true;
-        games = await fetchGames();
+        games = numberGamesByTarget(await fetchGames());
 
         // 推移グラフでゲームごとの指標を出すため、全ゲームの投げをまとめて取得する（1ゲーム24本なので軽い）
         const allThrows = games.length
@@ -845,6 +845,21 @@
         const rows = await query("id, played_at, total_score, note");
         return rows.map((row) => ({ ...row, target: "BULL" }));
       }
+    }
+
+    // データベースの id は保存に失敗すると飛ぶことがあるので、表示には狙いごとの通し番号（古い順に 1 から）を使う
+    function numberGamesByTarget(rows) {
+      const counters = new Map();
+      return rows.map((row) => {
+        const target = gameTarget(row);
+        const seq = (counters.get(target) || 0) + 1;
+        counters.set(target, seq);
+        return { ...row, seq };
+      });
+    }
+
+    function gameNo(game) {
+      return `${gameTarget(game)} #${game.seq}`;
     }
 
     // 分析の狙いの選択肢は、実際に投げたことのある狙いだけにする。
@@ -996,19 +1011,21 @@
     // ---------- ゲーム比較 ----------
 
     function gameOptionLabel(game) {
-      return `#${game.id}　${formatDateTime(game.played_at)}　${gameTarget(game)}　${game.total_score}点`;
+      return `${gameNo(game)}　${formatDateTime(game.played_at)}　${game.total_score}点`;
     }
 
+    // 比較は、分析欄で選んでいる狙いのゲーム同士で行う
     function renderCompareOptions(useLatest = false) {
       const previousA = useLatest ? "" : compareAEl.value;
       const previousB = useLatest ? "" : compareBEl.value;
-      const options = games.slice().reverse()
+      const candidates = gamesForAnalysisTarget();
+      const options = candidates.slice().reverse()
         .map((game) => `<option value="${game.id}">${escapeHtml(gameOptionLabel(game))}</option>`)
         .join("");
       compareAEl.innerHTML = options;
       compareBEl.innerHTML = options;
 
-      const ids = games.map((game) => String(game.id));
+      const ids = candidates.map((game) => String(game.id));
       // 初期値（と保存直後）は A = 1つ前のゲーム、B = 最新ゲーム。それ以外は選んでいたゲームを保つ
       compareAEl.value = ids.includes(previousA) ? previousA : (ids[ids.length - 2] || ids[ids.length - 1] || "");
       compareBEl.value = ids.includes(previousB) ? previousB : (ids[ids.length - 1] || "");
@@ -1060,9 +1077,14 @@
       compareMarkersLayer.innerHTML = "";
       const gameA = games.find((game) => String(game.id) === compareAEl.value);
       const gameB = games.find((game) => String(game.id) === compareBEl.value);
-      if (!gameA || !gameB) {
+      const message = !gameA || !gameB
+        ? "比較するゲームがありません。"
+        : gamesForAnalysisTarget().length < 2
+          ? `${targetName(analysisTargetEl.value)}狙いのゲームがまだ1つなので、比較できません。もう1ゲーム投げると比べられます。`
+          : "";
+      if (message) {
         compareNotesEl.innerHTML = "";
-        compareTableEl.innerHTML = `<tr><td colspan="4" class="text-slate-400">比較するゲームがありません。</td></tr>`;
+        compareTableEl.innerHTML = `<tr><td colspan="4" class="text-slate-400">${message}</td></tr>`;
         compareDartTableEl.innerHTML = "";
         return;
       }
@@ -1252,7 +1274,7 @@
             },
             tooltip: {
               callbacks: {
-                title: (items) => `#${trendGames[items[0].dataIndex].id}　${items[0].label}`,
+                title: (items) => `${gameNo(trendGames[items[0].dataIndex])}　${items[0].label}`,
                 label: (item) => `${item.dataset.label}: ${formatValue(item.parsed.y)}`
               }
             }
@@ -1282,7 +1304,7 @@
       gamesTableEl.innerHTML = games.slice().reverse().map((game) => `
         <tr>
           <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
-          <td class="whitespace-nowrap">${gameTarget(game)}</td>
+          <td class="whitespace-nowrap">${gameNo(game)}</td>
           <td class="text-right font-semibold">${game.total_score}</td>
           <td class="text-right">${formatStats(game.total_score)}</td>
           <td class="whitespace-nowrap">${escapeHtml((game.note || "").replace(/\s*\n\s*/g, " ／ "))}</td>
@@ -1293,6 +1315,9 @@
     analysisTargetEl.addEventListener("change", () => {
       renderAnalysis();
       renderTrendChart();
+      // 狙いを切り替えたら、比較もその狙いの最新2ゲームにする
+      renderCompareOptions(true);
+      loadComparison();
     });
     trendMetricEl.addEventListener("change", () => {
       try {

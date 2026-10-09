@@ -38,6 +38,7 @@
 	- `darts/`
 		- `darts.html`（カウントアップの入力・分析。Supabase の `darts_games` / `darts_throws` を使用）
 		- `darts_supabase.sql`（テーブル・RLS・保存用関数の定義）
+		- `darts_target_migration.sql`（既存の環境にゲームごとの「狙い」を追加する移行用 SQL）
 	- `quadratic_function/`
 		- `quadratic.html`
 		- `quadratic_old.html`

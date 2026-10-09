@@ -1295,13 +1295,15 @@
       });
     }
 
+    // 分析で選んだ狙いのゲームだけを一覧にする
     function renderGamesTable() {
-      if (!games.length) {
+      const listed = gamesForAnalysisTarget();
+      if (!listed.length) {
         gamesTableEl.innerHTML = `<tr><td colspan="5" class="text-slate-400">まだ記録がありません。</td></tr>`;
         return;
       }
       // メモは改行を「／」にして1行にまとめ、行が縦に伸びないようにする（長いメモは表を横スクロールして読む）
-      gamesTableEl.innerHTML = games.slice().reverse().map((game) => `
+      gamesTableEl.innerHTML = listed.slice().reverse().map((game) => `
         <tr>
           <td class="whitespace-nowrap">${formatDateTime(game.played_at)}</td>
           <td class="whitespace-nowrap">${gameNo(game)}</td>
@@ -1315,6 +1317,7 @@
     analysisTargetEl.addEventListener("change", () => {
       renderAnalysis();
       renderTrendChart();
+      renderGamesTable();
       // 狙いを切り替えたら、比較もその狙いの最新2ゲームにする
       renderCompareOptions(true);
       loadComparison();

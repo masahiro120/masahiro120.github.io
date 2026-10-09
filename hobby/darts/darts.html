@@ -358,9 +358,9 @@
     // ボードの寸法（mm、ソフトダーツ相当の比率）とナンバーの並び（真上から時計回り）
     const BOARD = { innerBull: 6.35, outerBull: 15.9, tripleIn: 99, tripleOut: 107, doubleIn: 162, doubleOut: 170 };
     const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
-    // 狙える場所。クリケットで使う T20〜T15 を先に並べる
-    const TARGETS = ["BULL", "T20", "T19", "T18", "T17", "T16", "T15",
-      ...Array.from({ length: 14 }, (_, index) => `T${14 - index}`)];
+    // 狙える場所。今はクリケットで使う BULL と T20〜T15 に絞る
+    // （データベースは T1〜T20 まで受け付けるので、増やすときはここに足すだけでよい）
+    const TARGETS = ["BULL", "T20", "T19", "T18", "T17", "T16", "T15"];
     // トリプルを狙うときの中心（トリプルのリングの真ん中）までの半径
     const TRIPLE_CENTER_RADIUS = 103;
     // 狙った場所を示す点線の丸の色（ボードの色・投げの点の色と紛れない水色）

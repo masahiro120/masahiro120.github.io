@@ -1,11 +1,13 @@
 -- ダーツ練習記録（カウントアップ）
--- Supabase の SQL Editor で実行してください。
+-- Supabase の SQL Editor で実行してください（新しく作る場合。既存の環境に「狙い」を足すときは darts_target_migration.sql）。
 -- 公開ページから使うため anon には「読み取り」と「保存（追加）」だけを許可し、更新・削除はダッシュボードから行います。
 
 create table if not exists public.darts_games (
   id bigint generated always as identity primary key,
   played_at timestamptz not null default now(),
   game_type text not null default 'countup',
+  -- 狙った場所（BULL または T1〜T20）。ずれや距離はここを基準に測る
+  target text not null default 'BULL' check (target ~ '^(BULL|T([1-9]|1[0-9]|20))$'),
   total_score integer not null default 0,
   note text not null default '',
   created_at timestamptz not null default now()
@@ -67,16 +69,17 @@ create policy darts_throws_insert_all
   with check (true);
 
 -- 1ゲーム分（ゲーム＋24投）を1トランザクションで保存する。合計点は投げの点数から計算する
-create or replace function public.save_darts_game(p_note text, p_throws jsonb)
+create or replace function public.save_darts_game(p_note text, p_throws jsonb, p_target text default 'BULL')
 returns bigint
 language plpgsql
 as $$
 declare
   v_game_id bigint;
 begin
-  insert into public.darts_games (note, total_score)
+  insert into public.darts_games (note, target, total_score)
   values (
     coalesce(p_note, ''),
+    coalesce(p_target, 'BULL'),
     (select coalesce(sum((t ->> 'score')::integer), 0) from jsonb_array_elements(p_throws) as t)
   )
   returning id into v_game_id;
@@ -97,4 +100,4 @@ begin
 end;
 $$;
 
-grant execute on function public.save_darts_game(text, jsonb) to anon, authenticated;
+grant execute on function public.save_darts_game(text, jsonb, text) to anon, authenticated;

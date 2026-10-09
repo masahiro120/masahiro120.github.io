@@ -239,7 +239,7 @@
             <div>
               <h3 class="mb-2 text-sm font-bold text-white">刺さった位置 <span id="plot-caption" class="font-normal text-slate-300"></span></h3>
               <svg id="analysis-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="刺さった位置のプロット"></svg>
-              <p class="mt-2 text-xs text-slate-400">緑の点が1本ずつの位置、ピンクの×が平均の位置、水色の点線の丸が狙った場所です。</p>
+              <p class="mt-2 text-xs text-slate-400">緑の点が1本ずつの位置、ピンクの×が平均の位置、オレンジに塗った区画が狙った場所です。</p>
             </div>
             <div class="space-y-4">
               <div>
@@ -298,7 +298,7 @@
             <div>
               <svg id="compare-board" class="dartboard" viewBox="-200 -200 400 400" aria-label="2ゲームの刺さった位置の比較"></svg>
               <p class="mt-2 text-xs text-slate-400">
-                <span class="compare-swatch-a">●</span> ゲームA　<span class="compare-swatch-b">◆</span> ゲームB　× はそれぞれの平均の位置、点線の丸は狙った場所です。
+                <span class="compare-swatch-a">●</span> ゲームA　<span class="compare-swatch-b">◆</span> ゲームB　× はそれぞれの平均の位置、オレンジに塗った区画は狙った場所です。
               </p>
             </div>
             <div class="space-y-4">
@@ -363,8 +363,8 @@
     const TARGETS = ["BULL", "T20", "T19", "T18", "T17", "T16", "T15"];
     // トリプルを狙うときの中心（トリプルのリングの真ん中）までの半径
     const TRIPLE_CENTER_RADIUS = 103;
-    // 狙った場所を示す点線の丸の色（ボードの色・投げの点の色と紛れない水色）
-    const TARGET_MARKER_COLOR = "#22d3ee";
+    // 狙った区画を塗る色（ボードの赤・青・黒・白や、投げの点の黄・緑・ピンクと紛れないオレンジ）
+    const TARGET_FILL_COLOR = "#f97316";
     // 左右の行ったり来たりを数えるとき、狙いの縦の線からこの距離（mm）以内の投げは除外する
     const FLIP_CENTER_MARGIN = 15;
     // DARTSLIVE 風の配色（シングルは黒/白、ダブル・トリプルは赤/青）
@@ -560,12 +560,17 @@
       return game.target || "BULL";
     }
 
-    // 狙った場所に点線の丸を描く
+    // 狙った区画そのものを塗り替えて示す（投げの点より下に描く）
     function plotTarget(layer, target) {
-      const point = targetPoint(target);
-      const radius = target === "BULL" ? BOARD.outerBull + 4 : 12;
-      layer.appendChild(svgEl("circle", { cx: point.x, cy: -point.y, r: radius, fill: "none", stroke: "#0b0f19", "stroke-width": 4.5 }));
-      layer.appendChild(svgEl("circle", { cx: point.x, cy: -point.y, r: radius, fill: "none", stroke: TARGET_MARKER_COLOR, "stroke-width": 2.5, "stroke-dasharray": "4 3" }));
+      const wire = { stroke: "#94a3b8", "stroke-width": 0.6 };
+      const number = targetNumber(target);
+      if (number === null) {
+        layer.appendChild(svgEl("circle", { cx: 0, cy: 0, r: BOARD.outerBull, fill: TARGET_FILL_COLOR, ...wire }));
+        layer.appendChild(svgEl("circle", { cx: 0, cy: 0, r: BOARD.innerBull, fill: BOARD_COLORS.black, ...wire }));
+        return;
+      }
+      const center = NUMBER_ORDER.indexOf(number) * 18;
+      layer.appendChild(svgEl("path", { d: sectorPath(BOARD.tripleIn, BOARD.tripleOut, center - 9, center + 9), fill: TARGET_FILL_COLOR, ...wire }));
     }
 
     // ---------- ボードの描画 ----------
@@ -685,7 +690,7 @@
       missBtn.disabled = finished;
       savePanel.classList.toggle("hidden", !finished);
 
-      // 今のラウンドは黄色、それ以前は緑で表示。狙った場所は点線の丸
+      // 今のラウンドは黄色、それ以前は緑で表示。狙った区画はオレンジで塗る
       inputMarkersLayer.innerHTML = "";
       plotTarget(inputMarkersLayer, inputTarget);
       throws.forEach((item) => {

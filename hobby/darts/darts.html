@@ -1081,7 +1081,8 @@
           scales: {
             x: { ticks: { color: "#94a3b8", maxRotation: 0, autoSkip: true }, grid: { display: false } },
             y: {
-              ticks: { color: "#94a3b8", callback: (value) => `${value}${metric.unit}` },
+              // 整数で表す指標（ブルの本数など）は 0.5 のような目盛りを出さない
+              ticks: { color: "#94a3b8", precision: metric.digits === 0 ? 0 : undefined, callback: (value) => `${value}${metric.unit}` },
               // 符号付きの指標は 0 の線を目立たせる
               grid: { color: (context) => (metric.signed && context.tick.value === 0 ? "rgba(148, 163, 184, 0.6)" : "rgba(148, 163, 184, 0.15)") },
               // どの指標も 0 を範囲に含める（符号付きの指標で全部マイナスでも 0 の線が見えるように）

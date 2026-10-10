@@ -236,12 +236,12 @@
     // このデバイスで最後に開いていた会話と、新しい会話で使うモデル
     const CURRENT_ID_STORAGE_KEY = "darts.chat.currentId";
     const MODEL_STORAGE_KEY = "darts.chat.model";
-    // 選べるモデルと、料金の目安（100万トークンあたりのドル。2026年9月時点の公式料金）
+    // 選べるモデルと、料金の目安（100万トークンあたりのドル。2026年9月時点の公式料金）。cacheRead はキャッシュ読み込みの倍率
     const MODELS = [
-      { id: "claude-opus-5-5", label: "Claude Opus 5.5", short: "Opus 5.5", note: "原因の深掘りや練習方針の相談向け。料金は Sonnet の約2倍", input: 4, output: 20 },
-      { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5（標準）", short: "Sonnet 5.5", note: "普段の分析・比較・次に意識することに十分。速くて安い", input: 2, output: 10 },
-      { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", short: "Haiku 4.5", note: "一番速くて安い。簡単な質問向け", input: 1, output: 5 },
-      { id: "claude-fable-5-1", label: "Claude Fable 5.1", short: "Fable 5.1", note: "一番賢いが、料金は Opus の約2.5倍", input: 10, output: 50 }
+      { id: "claude-opus-5-5", label: "Claude Opus 5.5", short: "Opus 5.5", note: "原因の深掘りや練習方針の相談向け。料金は Sonnet の約2倍", input: 4, output: 20, cacheRead: 0.05 },
+      { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5（標準）", short: "Sonnet 5.5", note: "普段の分析・比較・次に意識することに十分。速くて安い", input: 2, output: 10, cacheRead: 0.1 },
+      { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", short: "Haiku 4.5", note: "一番速くて安い。簡単な質問向け", input: 1, output: 5, cacheRead: 0.1 },
+      { id: "claude-fable-5-1", label: "Claude Fable 5.1", short: "Fable 5.1", note: "一番賢いが、料金は Opus の約2.5倍", input: 10, output: 50, cacheRead: 0.025 }
     ];
     const DEFAULT_MODEL = "claude-sonnet-5-5";
     const YEN_PER_DOLLAR = 150;
@@ -341,10 +341,16 @@
       return container.innerHTML;
     }
 
-    // 1回のやり取りの料金の目安（キャッシュへの書き込みは1.25倍、読み込みは0.1倍）
+    // 1回のやり取りの料金の目安。キャッシュへの書き込みは、5分の保存なら1.25倍、1時間の保存なら2倍。
+    // 読み込みはモデルごとの倍率（Opus 5.5 は0.05倍など）
     function estimateYen(usage, modelId) {
       const price = modelInfo(modelId);
-      const inputDollars = ((usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) * 1.25 + (usage.cache_read_input_tokens || 0) * 0.1) * price.input / 1e6;
+      const created = usage.cache_creation_input_tokens || 0;
+      const created1h = usage.cache_creation && typeof usage.cache_creation.ephemeral_1h_input_tokens === "number"
+        ? usage.cache_creation.ephemeral_1h_input_tokens
+        : 0;
+      const created5m = created - created1h;
+      const inputDollars = ((usage.input_tokens || 0) + created5m * 1.25 + created1h * 2 + (usage.cache_read_input_tokens || 0) * price.cacheRead) * price.input / 1e6;
       const outputDollars = (usage.output_tokens || 0) * price.output / 1e6;
       return (inputDollars + outputDollars) * YEN_PER_DOLLAR;
     }

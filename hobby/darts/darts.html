@@ -1334,7 +1334,8 @@
       trendMetricEl.value = TREND_METRICS[saved] ? saved : "score";
     }
 
-    function renderTrendChart() {
+    // animate: false のときはアニメーションなしで描く（画面の幅が変わって描き直すときなど）
+    function renderTrendChart({ animate = true } = {}) {
       const metric = TREND_METRICS[trendMetricEl.value] || TREND_METRICS.score;
       // 分析で選んだ狙いのゲームだけを並べる
       const trendGames = gamesForAnalysisTarget();
@@ -1360,6 +1361,7 @@
       trendCaptionEl.textContent = `${targetName(analysisTargetEl.value || "BULL")}狙いのゲームだけを表示しています。${metricCaption}`;
 
       // ゲーム数に合わせてグラフの横幅を決める。画面に収まらないときは横にスクロールする
+      lastTrendWidth = trendScrollEl.clientWidth;
       const neededWidth = trendGames.length * TREND_POINT_WIDTH + TREND_AXIS_ALLOWANCE;
       const scrollable = neededWidth > trendScrollEl.clientWidth;
       trendInnerEl.style.width = scrollable ? `${neededWidth}px` : "100%";
@@ -1394,6 +1396,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: animate ? undefined : false,
           interaction: { mode: "index", intersect: false },
           plugins: {
             // 線が2本以上のときだけ凡例を出す
@@ -1429,12 +1432,15 @@
     }
 
     // 分析で選んだ狙いのゲームだけを一覧にする
-    // 画面の幅が変わったら、推移グラフの横幅を計算し直す
+    // 画面の幅が変わったら、推移グラフの横幅を計算し直す。
+    // iPhone ではページをスクロールするとアドレスバーの出入りで resize が来るが、高さが変わるだけなので描き直さない
+    let lastTrendWidth = 0;
     let trendResizeTimer = null;
     window.addEventListener("resize", () => {
       clearTimeout(trendResizeTimer);
       trendResizeTimer = setTimeout(() => {
-        if (scoreChart) renderTrendChart();
+        if (!scoreChart || trendScrollEl.clientWidth === lastTrendWidth) return;
+        renderTrendChart({ animate: false });
       }, 200);
     });
 

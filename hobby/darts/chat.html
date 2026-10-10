@@ -372,7 +372,8 @@
     }
 
     function renderChat(pendingQuestion = null) {
-      const items = current.display.map((item) => {
+      // meta（会話に使った指示文の版など）は画面に出さない
+      const items = current.display.filter((item) => item.role !== "meta").map((item) => {
         if (item.role === "user") return userBubble(item.text);
         // 練習データを読み込んだ・追加したことを示す小さなお知らせ
         if (item.role === "data") return `<p class="text-center text-xs text-slate-400">${escapeHtml(item.text)}</p>`;

@@ -1454,12 +1454,12 @@
         }
       });
 
-      // 別ページのチャットから「閉じる」で戻ってきたら、パネルを開き直し、別ページで続けた会話も表示する
+      // 別ページのチャットから「閉じる」で戻ってきたときは、パネルは閉じたままにする。
+      // 埋め込みのチャットは捨てておき、次に「Chat」で開いたときに、別ページで続けた会話も含めて読み込み直す
       window.addEventListener("message", (event) => {
         if (event.origin !== location.origin || !event.data || event.data.type !== "darts-chat-returned") return;
-        // 先にパネルを表示してから、最新の会話でチャットを読み込み直す
-        setOpen(true);
-        frame.src = `chat.html?embed=1&t=${Date.now()}`;
+        setOpen(false);
+        frame.removeAttribute("src");
       });
 
       fab.addEventListener("click", () => setOpen(!dock.classList.contains("open")));

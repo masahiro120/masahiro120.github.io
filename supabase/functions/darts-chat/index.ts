@@ -3,6 +3,7 @@
 // ページ（hobby/darts/chat.html）から質問を受け取り、Claude API に渡して答えを返す。
 // - Claude の API キーは Edge Function の秘密の設定（ANTHROPIC_API_KEY）にだけ置く
 // - 使えるのは、ログインしたユーザーのうち ALLOWED_EMAIL のメールアドレスの人だけ
+// - モデルはページで会話ごとに選ぶ（途中で変えると思考の記録やキャッシュが引き継がれないため）
 // - 会話の最初の質問に、その時点の練習データの集計を添える。会話の途中でデータを差し替えると
 //   Claude 側で過去の思考の記録と合わなくなるため、新しいデータは「新しい会話」で反映する
 import Anthropic from "npm:@anthropic-ai/sdk";
@@ -11,7 +12,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://jpkycfgmgmrhuqambtxm.supabase.co";
 // 公開用のキー（ページにも書かれているもの）。データの読み取りとログイン確認にだけ使う
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
-const MODEL = "claude-opus-5-5";
+// ページで選べるモデル。effort に対応しないモデル（Haiku 4.5）と、サーバー側のフォールバックに対応しないモデルを分ける
+const MODELS: Record<string, { effort: "low" | "medium" | "high" | null; fallback: boolean }> = {
+  "claude-opus-5-5": { effort: "medium", fallback: true },
+  "claude-sonnet-5-5": { effort: "medium", fallback: true },
+  "claude-haiku-4-5": { effort: null, fallback: false },
+  "claude-fable-5-1": { effort: "medium", fallback: true },
+};
+const DEFAULT_MODEL = "claude-opus-5-5";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -237,7 +245,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "このチャットを使う権限がありません。ログインし直してください。" }, 403);
   }
 
-  let body: { history?: Anthropic.Beta.BetaMessageParam[]; question?: string };
+  let body: { history?: Anthropic.Beta.BetaMessageParam[]; question?: string; model?: string };
   try {
     body = await request.json();
   } catch {
@@ -247,6 +255,9 @@ Deno.serve(async (request) => {
   const history = Array.isArray(body.history) ? body.history : [];
   if (!question) return jsonResponse({ error: "質問が空です。" }, 400);
   if (question.length > 4000) return jsonResponse({ error: "質問が長すぎます（4000文字まで）。" }, 400);
+  const model = body.model ?? DEFAULT_MODEL;
+  const modelConfig = MODELS[model];
+  if (!modelConfig) return jsonResponse({ error: `使えないモデルです: ${model}` }, 400);
 
   try {
     // 会話の最初だけ、その時点の練習データを質問の前に添える
@@ -257,13 +268,12 @@ Deno.serve(async (request) => {
 
     const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
     const response = await client.beta.messages.create({
-      model: MODEL,
+      model,
       max_tokens: 16000,
       system: SYSTEM_PROMPT,
-      output_config: { effort: "medium" },
-      // 安全チェックで止められたときは、推奨されるモデルで自動的に答え直す
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...(modelConfig.effort ? { output_config: { effort: modelConfig.effort } } : {}),
+      // 安全チェックで止められたときは、推奨されるモデルで自動的に答え直す（対応するモデルだけ）
+      ...(modelConfig.fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
       // 同じ会話で練習データ以前の部分を毎回送るので、キャッシュで料金を抑える
       cache_control: { type: "ephemeral" },
       messages: [...history, userMessage],
@@ -284,6 +294,7 @@ Deno.serve(async (request) => {
       userMessage,
       assistantMessage: { role: "assistant", content: response.content },
       truncated: response.stop_reason === "max_tokens",
+      model: response.model,
       usage: response.usage,
     });
   } catch (error) {

@@ -626,7 +626,7 @@
       }
       if (!opener) return;
       event.preventDefault();
-      // 記録のタブに、チャットのパネルを開き直して最新の会話を読み込むよう伝える
+      // 記録のタブに、戻ったことを伝える（記録のタブは次にパネルを開くときに最新の会話を読み込む）
       opener.postMessage({ type: "darts-chat-returned" }, location.origin);
       opener.focus();
       window.close();

@@ -66,11 +66,33 @@
       overflow: hidden;
     }
 
-    .darts-chart-frame canvas {
+    /* 推移グラフは、ゲームが増えたら横に伸ばしてスクロールで見る */
+    .trend-scroll {
+      height: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior: none;
+    }
+
+    .trend-inner {
+      position: relative;
+      height: 100%;
+      min-width: 100%;
+    }
+
+    .trend-inner canvas {
       display: block;
-      max-width: 100%;
       width: 100% !important;
       height: 100% !important;
+    }
+
+    /* スクロールしても縦軸の目盛りが読めるよう、目盛りの部分を写した canvas を左に重ねる */
+    .trend-axis {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      pointer-events: none;
     }
 
     /* 相談チャットのパネル。広い画面では右に並べ、狭い画面では全体に重ねる */
@@ -320,7 +342,12 @@
                 </div>
                 <p id="trend-caption" class="mb-2 text-xs text-slate-400"></p>
                 <div class="darts-chart-frame relative h-56">
-                  <canvas id="score-chart"></canvas>
+                  <canvas id="trend-axis" class="trend-axis hidden"></canvas>
+                  <div id="trend-scroll" class="trend-scroll">
+                    <div id="trend-inner" class="trend-inner">
+                      <canvas id="score-chart"></canvas>
+                    </div>
+                  </div>
                 </div>
               </div>
               <!-- 約10ゲーム分の高さで止め、それより前のゲームは縦スクロールで見る（見出しは固定）。
@@ -473,6 +500,14 @@
     const gamesTableEl = document.getElementById("games-table");
     const scoreChartEl = document.getElementById("score-chart");
     const trendMetricEl = document.getElementById("trend-metric");
+    const trendScrollEl = document.getElementById("trend-scroll");
+    const trendInnerEl = document.getElementById("trend-inner");
+    const trendAxisEl = document.getElementById("trend-axis");
+    // 推移グラフで1ゲームに使う横幅（px）。これより詰まるときは横にスクロールする
+    const TREND_POINT_WIDTH = 34;
+    const TREND_AXIS_ALLOWANCE = 70;
+    // 縦軸を写した canvas の背景（グラフの周りの色に近づける）
+    const TREND_AXIS_BACKGROUND = "#141c2e";
     const trendCaptionEl = document.getElementById("trend-caption");
 
     const statAverageEl = document.getElementById("stat-average");
@@ -1324,8 +1359,33 @@
       const metricCaption = metric.caption || (metric.lowerIsBetter ? "低いほど良い指標です。" : "");
       trendCaptionEl.textContent = `${targetName(analysisTargetEl.value || "BULL")}狙いのゲームだけを表示しています。${metricCaption}`;
 
+      // ゲーム数に合わせてグラフの横幅を決める。画面に収まらないときは横にスクロールする
+      const neededWidth = trendGames.length * TREND_POINT_WIDTH + TREND_AXIS_ALLOWANCE;
+      const scrollable = neededWidth > trendScrollEl.clientWidth;
+      trendInnerEl.style.width = scrollable ? `${neededWidth}px` : "100%";
+      trendAxisEl.classList.toggle("hidden", !scrollable);
+
       if (scoreChart) scoreChart.destroy();
       scoreChart = new Chart(scoreChartEl, {
+        plugins: [{
+          // 描くたびに、縦軸の目盛りの部分を左の canvas に写す（横にスクロールしても目盛りが見える）
+          id: "stickyYAxis",
+          afterRender(chart) {
+            if (trendAxisEl.classList.contains("hidden") || !chart.chartArea) return;
+            const ratio = chart.currentDevicePixelRatio || window.devicePixelRatio || 1;
+            // 写すのは縦軸の目盛りの部分だけ（グラフの点や横軸の日付が混ざらないよう、少し内側で切る）
+            const axisWidth = Math.max(0, Math.floor(chart.scales.y.right) - 6);
+            const height = Math.ceil(chart.chartArea.bottom) + 1;
+            trendAxisEl.width = axisWidth * ratio;
+            trendAxisEl.height = height * ratio;
+            trendAxisEl.style.width = `${axisWidth}px`;
+            trendAxisEl.style.height = `${height}px`;
+            const context = trendAxisEl.getContext("2d");
+            context.fillStyle = TREND_AXIS_BACKGROUND;
+            context.fillRect(0, 0, trendAxisEl.width, trendAxisEl.height);
+            context.drawImage(chart.canvas, 0, 0, axisWidth * ratio, height * ratio, 0, 0, axisWidth * ratio, height * ratio);
+          }
+        }],
         type: "line",
         data: {
           labels: trendGames.map((game) => formatDateTime(game.played_at)),
@@ -1364,9 +1424,20 @@
           }
         }
       });
+      // 最新のゲームが見えるよう、右端までスクロールしておく
+      trendScrollEl.scrollLeft = trendScrollEl.scrollWidth;
     }
 
     // 分析で選んだ狙いのゲームだけを一覧にする
+    // 画面の幅が変わったら、推移グラフの横幅を計算し直す
+    let trendResizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(trendResizeTimer);
+      trendResizeTimer = setTimeout(() => {
+        if (scoreChart) renderTrendChart();
+      }, 200);
+    });
+
     function renderGamesTable() {
       const listed = gamesForAnalysisTarget();
       if (!listed.length) {

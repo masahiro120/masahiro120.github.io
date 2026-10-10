@@ -72,6 +72,60 @@
       width: 100% !important;
       height: 100% !important;
     }
+
+    /* 相談チャットのパネル。広い画面では右に並べ、狭い画面では全体に重ねる */
+    :root {
+      --chat-dock-width: 440px;
+    }
+
+    .chat-dock {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      width: min(var(--chat-dock-width), 100vw);
+      height: 100dvh;
+      background: #0f172a;
+      border-left: 1px solid #334155;
+      box-shadow: -12px 0 30px rgba(2, 6, 23, 0.5);
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      visibility: hidden;
+    }
+
+    .chat-dock.open {
+      transform: none;
+      visibility: visible;
+    }
+
+    .chat-dock iframe {
+      flex: 1;
+      width: 100%;
+      border: 0;
+    }
+
+    .chat-dock-fab {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 40;
+    }
+
+    /* 広い画面では、パネルを開いている間は記録の画面を左に寄せて並べる */
+    @media (min-width: 1100px) {
+      body.chat-dock-open {
+        padding-right: var(--chat-dock-width);
+      }
+    }
+
+    @media (max-width: 1099px) {
+      .chat-dock {
+        width: 100vw;
+        border-left: 0;
+      }
+    }
   </style>
 </head>
 
@@ -82,7 +136,7 @@
         <div class="section-title section-title-inline">
           <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">ダーツ練習記録</h1>
           <div class="flex gap-2">
-            <a href="chat.html" class="back-button back-button-inline">相談</a>
+            <a href="chat.html" id="chat-dock-link" class="back-button back-button-inline">相談</a>
             <a href="/index.html" class="back-button back-button-inline">戻る</a>
           </div>
         </div>
@@ -1354,6 +1408,61 @@
     inputTargetEl.value = inputTarget;
     renderInput();
     loadHistory();
+  </script>
+
+  <!-- 相談チャット（chat.html を埋め込む。会話やログインは単独のページと共通） -->
+  <button id="chat-dock-fab" class="chat-dock-fab rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700" aria-controls="chat-dock">相談</button>
+  <aside id="chat-dock" class="chat-dock" aria-label="相談チャット" aria-hidden="true">
+    <div class="flex items-center justify-between gap-2 border-b border-slate-700 px-4 py-2">
+      <h2 class="text-base font-bold text-white">相談チャット</h2>
+      <div class="flex items-center gap-2">
+        <a href="chat.html" target="_blank" rel="noopener" class="rounded-lg bg-slate-700 px-3 py-1 text-xs font-semibold text-slate-100">別ページで開く</a>
+        <button id="chat-dock-close" class="rounded-lg bg-slate-200 px-3 py-1 text-sm font-semibold text-slate-700" aria-label="相談チャットを閉じる">閉じる</button>
+      </div>
+    </div>
+    <iframe id="chat-dock-frame" title="相談チャット"></iframe>
+  </aside>
+  <script>
+    (() => {
+      const dock = document.getElementById("chat-dock");
+      const frame = document.getElementById("chat-dock-frame");
+      const fab = document.getElementById("chat-dock-fab");
+      const link = document.getElementById("chat-dock-link");
+      const closeBtn = document.getElementById("chat-dock-close");
+      // 広い画面で開いていたかを覚えておき、次に開いたときも並べて表示する
+      const OPEN_KEY = "darts.chatDock.open";
+      const wideScreen = () => window.matchMedia("(min-width: 1100px)").matches;
+
+      function setOpen(open) {
+        // 初めて開いたときにチャットを読み込む
+        if (open && !frame.src) frame.src = "chat.html?embed=1";
+        dock.classList.toggle("open", open);
+        dock.setAttribute("aria-hidden", String(!open));
+        document.body.classList.toggle("chat-dock-open", open);
+        fab.classList.toggle("hidden", open);
+        try {
+          localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+        } catch (error) {
+          // 覚えられなくても開閉はできる
+        }
+      }
+
+      fab.addEventListener("click", () => setOpen(true));
+      closeBtn.addEventListener("click", () => setOpen(false));
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        setOpen(!dock.classList.contains("open"));
+      });
+
+      let wasOpen = false;
+      try {
+        wasOpen = localStorage.getItem(OPEN_KEY) === "1";
+      } catch (error) {
+        wasOpen = false;
+      }
+      // スマホでは画面を覆ってしまうので、開いたままにはしない
+      if (wasOpen && wideScreen()) setOpen(true);
+    })();
   </script>
 </body>
 

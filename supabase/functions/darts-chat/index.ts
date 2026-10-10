@@ -4,6 +4,7 @@
 // - Claude の API キーは Edge Function の秘密の設定（ANTHROPIC_API_KEY）にだけ置く
 // - 使えるのは、ログインしたユーザーのうち ALLOWED_EMAIL のメールアドレスの人だけ
 // - モデルはページで会話ごとに選ぶ（途中で変えると思考の記録やキャッシュが引き継がれないため）
+// - 会話は darts_chat_conversations に保存し、どのデバイスからでも続けられるようにする
 // - 会話の最初の質問に、その時点の練習データの集計を添える。会話の途中でデータを差し替えると
 //   Claude 側で過去の思考の記録と合わなくなるため、新しいデータは「新しい会話」で反映する
 import Anthropic from "npm:@anthropic-ai/sdk";
@@ -245,19 +246,40 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "このチャットを使う権限がありません。ログインし直してください。" }, 403);
   }
 
-  let body: { history?: Anthropic.Beta.BetaMessageParam[]; question?: string; model?: string };
+  let body: { conversationId?: string | null; question?: string; model?: string };
   try {
     body = await request.json();
   } catch {
     return jsonResponse({ error: "リクエストの形式が正しくありません。" }, 400);
   }
   const question = (body.question ?? "").trim();
-  const history = Array.isArray(body.history) ? body.history : [];
   if (!question) return jsonResponse({ error: "質問が空です。" }, 400);
   if (question.length > 4000) return jsonResponse({ error: "質問が長すぎます（4000文字まで）。" }, 400);
-  const model = body.model ?? DEFAULT_MODEL;
+
+  // 会話はデータベースに保存し、どのデバイスからでも同じ会話を続けられるようにする。
+  // ログインしたユーザーの権限で読み書きするので、本人の会話しか触れない（行ごとのアクセス制限）
+  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  type Conversation = { id: string; model: string; title: string; history: Anthropic.Beta.BetaMessageParam[]; display: unknown[] };
+  let conversation: Conversation;
+  if (body.conversationId) {
+    const { data, error } = await userClient
+      .from("darts_chat_conversations")
+      .select("id, model, title, history, display")
+      .eq("id", body.conversationId)
+      .maybeSingle();
+    if (error) return jsonResponse({ error: `会話を読み込めませんでした: ${error.message}` }, 500);
+    if (!data) return jsonResponse({ error: "会話が見つかりませんでした。「新しい会話」から始めてください。" }, 404);
+    conversation = data as Conversation;
+  } else {
+    // 新しい会話はモデルを選んで始める。保存は Claude の答えが返ってから行う
+    conversation = { id: "", model: body.model ?? DEFAULT_MODEL, title: question.slice(0, 40), history: [], display: [] };
+  }
+  const model = conversation.model;
   const modelConfig = MODELS[model];
   if (!modelConfig) return jsonResponse({ error: `使えないモデルです: ${model}` }, 400);
+  const history = conversation.history;
 
   try {
     // 会話の最初だけ、その時点の練習データを質問の前に添える
@@ -288,15 +310,31 @@ Deno.serve(async (request) => {
       .map((block) => block.text)
       .join("\n\n");
 
-    // ページは userMessage と assistant の content をそのまま会話の履歴に足す（途中を書き換えない）
-    return jsonResponse({
-      text,
-      userMessage,
-      assistantMessage: { role: "assistant", content: response.content },
-      truncated: response.stop_reason === "max_tokens",
-      model: response.model,
-      usage: response.usage,
-    });
+    // 会話の履歴には、質問と Claude の返答をそのまま足す（途中を書き換えない）
+    const truncated = response.stop_reason === "max_tokens";
+    const newHistory = [...history, userMessage, { role: "assistant", content: response.content }];
+    const newDisplay = [
+      ...conversation.display,
+      { role: "user", text: question },
+      { role: "assistant", text, model: response.model, usage: response.usage, truncated },
+    ];
+    const saved = conversation.id
+      ? await userClient
+        .from("darts_chat_conversations")
+        .update({ history: newHistory, display: newDisplay, updated_at: new Date().toISOString() })
+        .eq("id", conversation.id)
+        .select("id")
+        .single()
+      : await userClient
+        .from("darts_chat_conversations")
+        .insert({ model, title: conversation.title, history: newHistory, display: newDisplay })
+        .select("id")
+        .single();
+    if (saved.error) {
+      return jsonResponse({ error: `答えは受け取りましたが、会話を保存できませんでした: ${saved.error.message}`, text }, 500);
+    }
+
+    return jsonResponse({ conversationId: saved.data.id, display: newDisplay, text, truncated, model: response.model, usage: response.usage });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return jsonResponse({ error: "Claude の API キーが正しくありません（ANTHROPIC_API_KEY を確認してください）。" }, 500);

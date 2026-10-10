@@ -20,7 +20,7 @@ const MODELS: Record<string, { effort: "low" | "medium" | "high" | null; fallbac
   "claude-haiku-4-5": { effort: null, fallback: false },
   "claude-fable-5-1": { effort: "medium", fallback: true },
 };
-const DEFAULT_MODEL = "claude-opus-5-5";
+const DEFAULT_MODEL = "claude-sonnet-5-5";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

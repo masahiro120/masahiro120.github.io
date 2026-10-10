@@ -83,21 +83,18 @@
       top: 0;
       right: 0;
       z-index: 50;
-      display: flex;
+      /* 滑り込ませる動きを付けると、開く途中で読み込み直したチャットが描かれないことがあるので、表示・非表示だけを切り替える */
+      display: none;
       flex-direction: column;
       width: min(var(--chat-dock-width), 100vw);
       height: 100dvh;
       background: #0f172a;
       border-left: 1px solid #334155;
       box-shadow: -12px 0 30px rgba(2, 6, 23, 0.5);
-      transform: translateX(100%);
-      transition: transform 0.2s ease;
-      visibility: hidden;
     }
 
     .chat-dock.open {
-      transform: none;
-      visibility: visible;
+      display: flex;
     }
 
     .chat-dock iframe {
@@ -106,11 +103,12 @@
       border: 0;
     }
 
+    /* 開く・閉じるのボタン。パネルの上にも出るように、パネルより手前に置く */
     .chat-dock-fab {
       position: fixed;
       right: 1rem;
       bottom: 1rem;
-      z-index: 40;
+      z-index: 60;
     }
 
     /* 広い画面では、パネルを開いている間は記録の画面を左に寄せて並べる */
@@ -135,10 +133,7 @@
       <div class="card-body space-y-6">
         <div class="section-title section-title-inline">
           <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">ダーツ練習記録</h1>
-          <div class="flex gap-2">
-            <a href="chat.html" id="chat-dock-link" class="back-button back-button-inline">相談</a>
-            <a href="/index.html" class="back-button back-button-inline">戻る</a>
-          </div>
+          <a href="/index.html" class="back-button back-button-inline">戻る</a>
         </div>
 
         <div id="status" class="rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200">データを読み込み中...</div>
@@ -1411,13 +1406,12 @@
   </script>
 
   <!-- 相談チャット（chat.html を埋め込む。会話やログインは単独のページと共通） -->
-  <button id="chat-dock-fab" class="chat-dock-fab rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700" aria-controls="chat-dock">相談</button>
+  <button id="chat-dock-fab" class="chat-dock-fab rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700" aria-controls="chat-dock" aria-expanded="false">Chat</button>
   <aside id="chat-dock" class="chat-dock" aria-label="相談チャット" aria-hidden="true">
     <div class="flex items-center justify-between gap-2 border-b border-slate-700 px-4 py-2">
       <h2 class="text-base font-bold text-white">相談チャット</h2>
       <div class="flex items-center gap-2">
         <a href="chat.html" id="chat-dock-popout" target="_blank" class="rounded-lg bg-slate-700 px-3 py-1 text-xs font-semibold text-slate-100">別ページで開く</a>
-        <button id="chat-dock-close" class="rounded-lg bg-slate-200 px-3 py-1 text-sm font-semibold text-slate-700" aria-label="相談チャットを閉じる">閉じる</button>
       </div>
     </div>
     <iframe id="chat-dock-frame" title="相談チャット"></iframe>
@@ -1427,8 +1421,6 @@
       const dock = document.getElementById("chat-dock");
       const frame = document.getElementById("chat-dock-frame");
       const fab = document.getElementById("chat-dock-fab");
-      const link = document.getElementById("chat-dock-link");
-      const closeBtn = document.getElementById("chat-dock-close");
       const popout = document.getElementById("chat-dock-popout");
       // 広い画面で開いていたかを覚えておき、次に開いたときも並べて表示する
       const OPEN_KEY = "darts.chatDock.open";
@@ -1440,7 +1432,9 @@
         dock.classList.toggle("open", open);
         dock.setAttribute("aria-hidden", String(!open));
         document.body.classList.toggle("chat-dock-open", open);
-        fab.classList.toggle("hidden", open);
+        // 右下のボタン1つで開閉する（開いている間は「閉じる」）
+        fab.textContent = open ? "閉じる" : "Chat";
+        fab.setAttribute("aria-expanded", String(open));
         try {
           localStorage.setItem(OPEN_KEY, open ? "1" : "0");
         } catch (error) {
@@ -1448,7 +1442,7 @@
         }
       }
 
-      // 別ページはスクリプトで開く。こうしておくと、チャットのページの「記録へ」でそのタブを閉じて、この画面に戻れる
+      // 別ページはスクリプトで開く。こうしておくと、チャットのページの「閉じる」でそのタブを閉じて、この画面に戻れる
       popout.addEventListener("click", (event) => {
         event.preventDefault();
         const tab = window.open("chat.html", "darts-chat");
@@ -1460,19 +1454,15 @@
         }
       });
 
-      // 別ページのチャットから「記録へ」で戻ってきたら、パネルを開き直し、別ページで続けた会話も表示する
+      // 別ページのチャットから「閉じる」で戻ってきたら、パネルを開き直し、別ページで続けた会話も表示する
       window.addEventListener("message", (event) => {
         if (event.origin !== location.origin || !event.data || event.data.type !== "darts-chat-returned") return;
-        if (frame.src) frame.contentWindow.location.reload();
+        // 先にパネルを表示してから、最新の会話でチャットを読み込み直す
         setOpen(true);
+        frame.src = `chat.html?embed=1&t=${Date.now()}`;
       });
 
-      fab.addEventListener("click", () => setOpen(true));
-      closeBtn.addEventListener("click", () => setOpen(false));
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        setOpen(!dock.classList.contains("open"));
-      });
+      fab.addEventListener("click", () => setOpen(!dock.classList.contains("open")));
 
       let wasOpen = false;
       try {

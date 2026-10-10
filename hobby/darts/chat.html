@@ -106,6 +106,22 @@
       background: rgba(148, 163, 184, 0.15);
     }
 
+    .chat-close-fab {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 60;
+    }
+
+    /* 右下のボタンが送信ボタンなどに重ならないよう、下に余白を取る */
+    body {
+      padding-bottom: 4.5rem;
+    }
+
+    body.embedded .chat-close-fab {
+      display: none;
+    }
+
     /* 記録ページのパネルに埋め込んだとき（chat.html?embed=1）は、見出しと外側の枠を省いて詰める */
     body.embedded {
       background: #0f172a;
@@ -143,7 +159,6 @@
       <div class="card-body space-y-5">
         <div class="page-title-row section-title section-title-inline">
           <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">ダーツ相談チャット</h1>
-          <a href="darts.html" id="back-to-record" class="back-button back-button-inline">記録へ</a>
         </div>
 
         <div id="status" class="rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200">読み込み中...</div>
@@ -207,6 +222,9 @@
       </div>
     </div>
   </div>
+
+  <!-- 記録のページの「Chat」ボタンと同じ場所・形の「閉じる」ボタン（パネルに埋め込んだときは記録のページ側のボタンを使う） -->
+  <a href="darts.html" id="back-to-record" class="chat-close-fab rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700">閉じる</a>
 
   <script>
     const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
@@ -597,7 +615,7 @@
       renderModelSelect();
     });
 
-    // 記録のページの「別ページで開く」から開いたタブなら、このタブを閉じて元の記録のタブに戻る。
+    // 「閉じる」：記録のページの「別ページで開く」から開いたタブなら、このタブを閉じて元の記録のタブに戻る。
     // それ以外（直接開いたときなど）は、同じタブで記録のページへ移る
     document.getElementById("back-to-record").addEventListener("click", (event) => {
       let opener = null;

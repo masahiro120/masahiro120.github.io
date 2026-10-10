@@ -139,7 +139,7 @@
         <!-- チャット -->
         <div id="chat-panel" class="hidden space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <p class="text-sm text-slate-300">会話はどのデバイスからでも続けられます。会話を始めた時点の練習データをもとに答えるので、新しいゲームを反映するときは「新しい会話」を押してください。</p>
+            <p class="text-sm text-slate-300">会話はどのデバイスからでも続けられます。続けて質問すると、前回の質問のあとに記録したゲームのデータも自動で追加されます。</p>
             <div class="flex gap-2">
               <button id="new-chat-btn" class="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">新しい会話</button>
               <button id="logout-btn" class="rounded-lg bg-slate-600 px-3 py-2 text-sm font-semibold text-white">ログアウト</button>
@@ -319,6 +319,8 @@
     function renderChat(pendingQuestion = null) {
       const items = current.display.map((item) => {
         if (item.role === "user") return userBubble(item.text);
+        // 練習データを読み込んだ・追加したことを示す小さなお知らせ
+        if (item.role === "data") return `<p class="text-center text-xs text-slate-400">${escapeHtml(item.text)}</p>`;
         const meta = answerMeta(item);
         return `<div class="flex justify-start"><div class="chat-answer max-w-full rounded-2xl bg-slate-800 px-4 py-3 text-sm text-slate-100">${renderMarkdown(item.text)}${meta ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(meta)}</p>` : ""}</div></div>`;
       });
@@ -528,7 +530,7 @@
       current = newConversation();
       writeStorage(CURRENT_ID_STORAGE_KEY, null);
       renderAll();
-      setStatus("新しい会話を始めます。最初の質問のときに、最新の練習データを読み込みます。");
+      setStatus("新しい会話を始めます。最初の質問のときに、練習データを読み込みます。");
     });
 
     conversationSelectEl.addEventListener("change", async () => {

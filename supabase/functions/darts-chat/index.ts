@@ -5,8 +5,8 @@
 // - 使えるのは、ログインしたユーザーのうち ALLOWED_EMAIL のメールアドレスの人だけ
 // - モデルはページで会話ごとに選ぶ（途中で変えると思考の記録やキャッシュが引き継がれないため）
 // - 会話は darts_chat_conversations に保存し、どのデバイスからでも続けられるようにする
-// - 会話の最初の質問に、その時点の練習データの集計を添える。会話の途中でデータを差し替えると
-//   Claude 側で過去の思考の記録と合わなくなるため、新しいデータは「新しい会話」で反映する
+// - 会話の最初の質問に、その時点の練習データの集計を添える。続きの質問では、前回のあとに増えたゲームだけを添える。
+//   会話の途中のデータを差し替えると Claude 側で過去の思考の記録と合わなくなるため、書き換えずに後ろへ足していく
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -129,8 +129,8 @@ function throwLabel(item: Throw) {
   return `${item.number}`;
 }
 
-// 会話の最初に添える練習データ。全ゲームの集計と、狙いごとの直近3ゲームの1本ずつの位置
-export async function buildDataContext() {
+// 練習データを読み込んで、ゲームごとの集計と1本ずつの位置（狙いの中心から）にする
+export async function loadPracticeData() {
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const [{ data: gameRows, error: gameError }, { data: throwRows, error: throwError }] = await Promise.all([
     supabase.from("darts_games").select("id, played_at, total_score, note, target").order("played_at", { ascending: true }),
@@ -165,11 +165,11 @@ export async function buildDataContext() {
       first_half_r1_4: half(1, 4),
       second_half_r5_8: half(5, 8),
       gameId: game.id,
+      playedAt: game.played_at,
     };
   });
 
-  const targets = [...new Set(summaries.map((summary) => summary.target))];
-  const recentThrows = targets.flatMap((target) => summaries.filter((summary) => summary.target === target).slice(-3)).map((summary) => {
+  const throwsOf = (summary: (typeof summaries)[number]) => {
     const origin = targetPoint(summary.target);
     return {
       no: summary.no,
@@ -181,17 +181,44 @@ export async function buildDataContext() {
         dy: item.y === null ? null : r0((item.y as number) - origin.y),
       })),
     };
-  });
+  };
 
+  return { summaries, throwsOf };
+}
+
+type PracticeData = Awaited<ReturnType<typeof loadPracticeData>>;
+type Summary = PracticeData["summaries"][number];
+
+const COORDINATE_NOTE = "座標・ずれの単位は mm。dx は右が正、dy は上が正で、どちらもそのゲームの狙いの中心からの値です。";
+const publicSummary = ({ gameId: _gameId, playedAt: _playedAt, ...rest }: Summary) => rest;
+
+// 会話の最初に添える練習データ。全ゲームの集計と、狙いごとの直近3ゲームの1本ずつの位置
+export function fullDataContext(data: PracticeData) {
+  const targets = [...new Set(data.summaries.map((summary) => summary.target))];
+  const recent = targets.flatMap((target) => data.summaries.filter((summary) => summary.target === target).slice(-3));
   return [
-    `以下は ${formatJst(new Date().toISOString())} 時点の練習データです（会話の途中では更新されません）。`,
-    "座標・ずれの単位は mm。dx は右が正、dy は上が正で、どちらもそのゲームの狙いの中心からの値です。",
+    `以下は ${formatJst(new Date().toISOString())} 時点の練習データです。このあと新しいゲームを記録したときは、そのゲームのデータを質問に添えて追加します。`,
+    COORDINATE_NOTE,
     "<games_summary>",
-    JSON.stringify(summaries.map(({ gameId: _gameId, ...rest }) => rest)),
+    JSON.stringify(data.summaries.map(publicSummary)),
     "</games_summary>",
     "<recent_throws>",
-    JSON.stringify(recentThrows),
+    JSON.stringify(recent.map(data.throwsOf)),
     "</recent_throws>",
+  ].join("\n");
+}
+
+// 会話の途中で増えたゲームだけを、次の質問に添える（それまでのデータは書き換えない）
+export function additionalDataContext(data: PracticeData, added: Summary[]) {
+  return [
+    `前回の質問のあとに記録された新しいゲームのデータです（${added.map((summary) => summary.no).join("、")}）。これまでのデータと合わせて考えてください。`,
+    COORDINATE_NOTE,
+    "<new_games_summary>",
+    JSON.stringify(added.map(publicSummary)),
+    "</new_games_summary>",
+    "<new_games_throws>",
+    JSON.stringify(added.map(data.throwsOf)),
+    "</new_games_throws>",
   ].join("\n");
 }
 
@@ -261,12 +288,16 @@ Deno.serve(async (request) => {
   const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  type Conversation = { id: string; model: string; title: string; history: Anthropic.Beta.BetaMessageParam[]; display: unknown[] };
+  type DisplayItem = { role: string; lastGameId?: number; [key: string]: unknown };
+  type Conversation = {
+    id: string; model: string; title: string; created_at?: string;
+    history: Anthropic.Beta.BetaMessageParam[]; display: DisplayItem[];
+  };
   let conversation: Conversation;
   if (body.conversationId) {
     const { data, error } = await userClient
       .from("darts_chat_conversations")
-      .select("id, model, title, history, display")
+      .select("id, model, title, created_at, history, display")
       .eq("id", body.conversationId)
       .maybeSingle();
     if (error) return jsonResponse({ error: `会話を読み込めませんでした: ${error.message}` }, 500);
@@ -282,10 +313,30 @@ Deno.serve(async (request) => {
   const history = conversation.history;
 
   try {
-    // 会話の最初だけ、その時点の練習データを質問の前に添える
-    const userContent: Anthropic.Beta.BetaContentBlockParam[] = history.length
-      ? [{ type: "text", text: question }]
-      : [{ type: "text", text: await buildDataContext() }, { type: "text", text: question }];
+    // 会話の最初は全データを、続きの質問では前回のあとに増えたゲームだけを、質問の前に添える。
+    // どこまで渡したかは、画面用の display に data 項目（lastGameId）として残す
+    const data = await loadPracticeData();
+    const latestGameId = data.summaries.length ? Math.max(...data.summaries.map((summary) => summary.gameId)) : 0;
+    const userContent: Anthropic.Beta.BetaContentBlockParam[] = [];
+    let dataNote: DisplayItem | null = null;
+    if (!history.length) {
+      userContent.push({ type: "text", text: fullDataContext(data) });
+      dataNote = { role: "data", lastGameId: latestGameId, text: `${data.summaries.length}ゲーム分の練習データを読み込みました。` };
+    } else {
+      const lastNote = [...conversation.display].reverse().find((item) => item.role === "data" && typeof item.lastGameId === "number");
+      // data 項目が無い古い会話は、会話を始めた時刻までのゲームを渡したものとみなす
+      const includedThrough = lastNote
+        ? (lastNote.lastGameId as number)
+        : Math.max(0, ...data.summaries
+          .filter((summary) => conversation.created_at && summary.playedAt <= conversation.created_at)
+          .map((summary) => summary.gameId));
+      const added = data.summaries.filter((summary) => summary.gameId > includedThrough);
+      if (added.length) {
+        userContent.push({ type: "text", text: additionalDataContext(data, added) });
+        dataNote = { role: "data", lastGameId: latestGameId, text: `新しいゲームのデータを追加しました（${added.map((summary) => summary.no).join("、")}）。` };
+      }
+    }
+    userContent.push({ type: "text", text: question });
     const userMessage: Anthropic.Beta.BetaMessageParam = { role: "user", content: userContent };
 
     const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
@@ -315,6 +366,7 @@ Deno.serve(async (request) => {
     const newHistory = [...history, userMessage, { role: "assistant", content: response.content }];
     const newDisplay = [
       ...conversation.display,
+      ...(dataNote ? [dataNote] : []),
       { role: "user", text: question },
       { role: "assistant", text, model: response.model, usage: response.usage, truncated },
     ];

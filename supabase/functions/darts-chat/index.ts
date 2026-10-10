@@ -347,8 +347,9 @@ Deno.serve(async (request) => {
       ...(modelConfig.effort ? { output_config: { effort: modelConfig.effort } } : {}),
       // 安全チェックで止められたときは、推奨されるモデルで自動的に答え直す（対応するモデルだけ）
       ...(modelConfig.fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-      // 同じ会話で練習データ以前の部分を毎回送るので、キャッシュで料金を抑える
-      cache_control: { type: "ephemeral" },
+      // 同じ会話で練習データ以前の部分を毎回送るので、キャッシュで料金を抑える。
+      // ゲームの合間（5〜60分）に続けて質問する使い方なので、既定の5分ではなく1時間残す
+      cache_control: { type: "ephemeral", ttl: "1h" },
       messages: [...history, userMessage],
     });
 

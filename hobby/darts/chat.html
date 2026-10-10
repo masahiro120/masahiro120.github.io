@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="night">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/icon.png">
+  <title>ダーツ相談チャット</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <style>
+    .chat-light-control {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    /* daisyUI の textarea は line-height: 2 で、iPhone ではカーソルが大きくなるため詰める */
+    textarea.chat-light-control {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .chat-log {
+      max-height: 65vh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    /* Claude の答え（Markdown）の見た目 */
+    .chat-answer {
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .chat-answer h1,
+    .chat-answer h2,
+    .chat-answer h3 {
+      font-weight: 700;
+      margin: 1em 0 0.4em;
+    }
+
+    .chat-answer h1 {
+      font-size: 1.15rem;
+    }
+
+    .chat-answer h2 {
+      font-size: 1.05rem;
+    }
+
+    .chat-answer h3 {
+      font-size: 1rem;
+    }
+
+    .chat-answer p,
+    .chat-answer ul,
+    .chat-answer ol {
+      margin: 0.5em 0;
+    }
+
+    .chat-answer ul {
+      list-style: disc;
+      padding-left: 1.4em;
+    }
+
+    .chat-answer ol {
+      list-style: decimal;
+      padding-left: 1.4em;
+    }
+
+    .chat-answer code {
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 4px;
+      padding: 0 0.3em;
+    }
+
+    .chat-answer pre {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 8px;
+      padding: 0.75em;
+      overflow-x: auto;
+    }
+
+    .chat-answer .table-wrap {
+      overflow-x: auto;
+      overscroll-behavior: none;
+      margin: 0.6em 0;
+    }
+
+    .chat-answer table {
+      border-collapse: collapse;
+      font-size: 0.9em;
+      white-space: nowrap;
+    }
+
+    .chat-answer th,
+    .chat-answer td {
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 0.3em 0.6em;
+    }
+
+    .chat-answer th {
+      background: rgba(148, 163, 184, 0.15);
+    }
+  </style>
+</head>
+
+<body class="page-shell">
+  <div class="main-container">
+    <div class="page-card">
+      <div class="card-body space-y-5">
+        <div class="section-title section-title-inline">
+          <h1 class="hero-title" style="font-size: clamp(2rem, 7vw, 2.8rem);">ダーツ相談チャット</h1>
+          <a href="darts.html" class="back-button back-button-inline">記録へ</a>
+        </div>
+
+        <div id="status" class="rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200">読み込み中...</div>
+
+        <!-- ログイン -->
+        <div id="login-panel" class="hidden rounded-2xl border border-slate-700 bg-slate-900/60 p-4 space-y-3">
+          <h2 class="text-lg font-bold text-white">ログイン</h2>
+          <p class="text-sm text-slate-300">このチャットは、登録したアカウントだけが使えます。</p>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="email" class="mb-1 block text-xs font-semibold text-slate-300">メールアドレス</label>
+              <input id="email" type="email" autocomplete="username" class="chat-light-control input input-bordered w-full" />
+            </div>
+            <div>
+              <label for="password" class="mb-1 block text-xs font-semibold text-slate-300">パスワード</label>
+              <input id="password" type="password" autocomplete="current-password" class="chat-light-control input input-bordered w-full" />
+            </div>
+          </div>
+          <button id="login-btn" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-40">ログイン</button>
+        </div>
+
+        <!-- チャット -->
+        <div id="chat-panel" class="hidden space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-slate-300">会話はどのデバイスからでも続けられます。続けて質問すると、前回の質問のあとに記録したゲームのデータも自動で追加されます。</p>
+            <div class="flex gap-2">
+              <button id="new-chat-btn" class="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">新しい会話</button>
+              <button id="logout-btn" class="rounded-lg bg-slate-600 px-3 py-2 text-sm font-semibold text-white">ログアウト</button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="min-w-0 flex-1">
+              <label for="conversation-select" class="mb-1 block text-xs font-semibold text-slate-300">会話</label>
+              <select id="conversation-select" class="select select-bordered select-sm w-full bg-slate-100 text-slate-900"></select>
+            </div>
+            <button id="delete-chat-btn" class="rounded-lg bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">削除</button>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label for="model-select" class="mb-1 block text-xs font-semibold text-slate-300">モデル</label>
+              <select id="model-select" class="select select-bordered select-sm bg-slate-100 text-slate-900"></select>
+            </div>
+            <p id="model-note" class="text-xs text-slate-400"></p>
+          </div>
+
+          <div id="chat-log" class="chat-log space-y-3 rounded-2xl border border-slate-700 bg-slate-900/60 p-4"></div>
+
+          <div class="space-y-2">
+            <label for="question" class="block text-xs font-semibold text-slate-300">質問</label>
+            <textarea id="question" rows="3" class="chat-light-control textarea textarea-bordered w-full" placeholder="例: 最新のゲームを分析して／次のゲームで意識することは？"></textarea>
+            <div class="flex flex-wrap gap-2">
+              <button data-preset="最新のゲームを分析してください。" class="preset-btn rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-100">最新のゲームを分析</button>
+              <button data-preset="最新のゲームを、同じ狙いの1つ前のゲームと比べてください。" class="preset-btn rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-100">1つ前と比較</button>
+              <button data-preset="次のゲームで意識することを1つ教えてください。" class="preset-btn rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-100">次に意識すること</button>
+            </div>
+            <button id="send-btn" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-40">送信</button>
+            <p class="text-xs text-slate-400">1回の質問ごとに Claude API の料金がかかります。答えの下の金額は1ドル150円で計算した目安です（Ctrl / ⌘ + Enter でも送信できます）。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://jpkycfgmgmrhuqambtxm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
+    const CHAT_FUNCTION = "darts-chat";
+    const CONVERSATIONS_TABLE = "darts_chat_conversations";
+    // 以前はブラウザに会話を保存していた。残っていればデータベースへ移す
+    const LEGACY_STORAGE_KEY = "darts.chat.conversation";
+    // このデバイスで最後に開いていた会話と、新しい会話で使うモデル
+    const CURRENT_ID_STORAGE_KEY = "darts.chat.currentId";
+    const MODEL_STORAGE_KEY = "darts.chat.model";
+    // 選べるモデルと、料金の目安（100万トークンあたりのドル。2026年9月時点の公式料金）
+    const MODELS = [
+      { id: "claude-opus-5-5", label: "Claude Opus 5.5", short: "Opus 5.5", note: "原因の深掘りや練習方針の相談向け。料金は Sonnet の約2倍", input: 4, output: 20 },
+      { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5（標準）", short: "Sonnet 5.5", note: "普段の分析・比較・次に意識することに十分。速くて安い", input: 2, output: 10 },
+      { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", short: "Haiku 4.5", note: "一番速くて安い。簡単な質問向け", input: 1, output: 5 },
+      { id: "claude-fable-5-1", label: "Claude Fable 5.1", short: "Fable 5.1", note: "一番賢いが、料金は Opus の約2.5倍", input: 10, output: 50 }
+    ];
+    const DEFAULT_MODEL = "claude-sonnet-5-5";
+    const YEN_PER_DOLLAR = 150;
+    const LIST_LIMIT = 30;
+
+    const supabaseClient = window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+
+    const statusEl = document.getElementById("status");
+    const loginPanel = document.getElementById("login-panel");
+    const chatPanel = document.getElementById("chat-panel");
+    const emailEl = document.getElementById("email");
+    const passwordEl = document.getElementById("password");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const newChatBtn = document.getElementById("new-chat-btn");
+    const deleteChatBtn = document.getElementById("delete-chat-btn");
+    const conversationSelectEl = document.getElementById("conversation-select");
+    const chatLogEl = document.getElementById("chat-log");
+    const questionEl = document.getElementById("question");
+    const sendBtn = document.getElementById("send-btn");
+    const modelSelectEl = document.getElementById("model-select");
+    const modelNoteEl = document.getElementById("model-note");
+
+    // conversations: 会話の一覧（新しい順）。current: 表示中の会話（id が null なら、まだ保存していない新しい会話）
+    let conversations = [];
+    let current = newConversation();
+    let sending = false;
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError
+        ? "rounded-lg bg-rose-900/50 px-4 py-3 text-sm text-rose-100"
+        : "rounded-lg bg-slate-900/50 px-4 py-3 text-sm text-slate-200";
+    }
+
+    function readStorage(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function writeStorage(key, value) {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch (error) {
+        // 保存できなくても使える（次に開いたときに最新の会話が選ばれるだけ）
+      }
+    }
+
+    function modelInfo(id) {
+      return MODELS.find((model) => model.id === id) || MODELS[0];
+    }
+
+    function preferredModel() {
+      const saved = readStorage(MODEL_STORAGE_KEY);
+      return MODELS.some((model) => model.id === saved) ? saved : DEFAULT_MODEL;
+    }
+
+    function newConversation() {
+      return { id: null, model: preferredModel(), title: "", display: [] };
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getMonth() + 1}/${date.getDate()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    // Claude の答えは Markdown なので、HTML に変換してから安全な要素だけ残す
+    function renderMarkdown(text) {
+      const html = DOMPurify.sanitize(marked.parse(text));
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      // 表は横スクロールできる枠に入れる
+      container.querySelectorAll("table").forEach((table) => {
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+        table.replaceWith(wrap);
+        wrap.appendChild(table);
+      });
+      return container.innerHTML;
+    }
+
+    // 1回のやり取りの料金の目安（キャッシュへの書き込みは1.25倍、読み込みは0.1倍）
+    function estimateYen(usage, modelId) {
+      const price = modelInfo(modelId);
+      const inputDollars = ((usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) * 1.25 + (usage.cache_read_input_tokens || 0) * 0.1) * price.input / 1e6;
+      const outputDollars = (usage.output_tokens || 0) * price.output / 1e6;
+      return (inputDollars + outputDollars) * YEN_PER_DOLLAR;
+    }
+
+    // 答えの下に出す、モデル・トークン数・料金の目安（以前ブラウザに保存した会話は meta の文字をそのまま出す）
+    function answerMeta(item) {
+      if (item.meta) return item.meta;
+      if (!item.usage) return "";
+      const usage = item.usage;
+      // 答えたモデル（サーバー側のフォールバックで別のモデルが答えた場合もある）。分からなければ会話のモデル
+      const modelId = (MODELS.find((model) => item.model && item.model.startsWith(model.id)) || modelInfo(current.model)).id;
+      // 入力はキャッシュに書き込んだ分・読み込んだ分も合わせた合計を出す
+      const inputTotal = (usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
+      return `${modelInfo(modelId).short}・入力 ${inputTotal}（うちキャッシュ読み込み ${usage.cache_read_input_tokens || 0}）／出力 ${usage.output_tokens ?? "-"} トークン・約${estimateYen(usage, modelId).toFixed(1)}円${item.truncated ? "・答えが長すぎて途中で切れました" : ""}`;
+    }
+
+    function userBubble(text) {
+      return `<div class="flex justify-end"><div class="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-blue-600 px-4 py-2 text-sm text-white">${escapeHtml(text)}</div></div>`;
+    }
+
+    function renderChat(pendingQuestion = null) {
+      const items = current.display.map((item) => {
+        if (item.role === "user") return userBubble(item.text);
+        // 練習データを読み込んだ・追加したことを示す小さなお知らせ
+        if (item.role === "data") return `<p class="text-center text-xs text-slate-400">${escapeHtml(item.text)}</p>`;
+        const meta = answerMeta(item);
+        return `<div class="flex justify-start"><div class="chat-answer max-w-full rounded-2xl bg-slate-800 px-4 py-3 text-sm text-slate-100">${renderMarkdown(item.text)}${meta ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(meta)}</p>` : ""}</div></div>`;
+      });
+      if (pendingQuestion !== null) {
+        items.push(userBubble(pendingQuestion));
+        items.push(`<div class="flex justify-start"><div class="rounded-2xl bg-slate-800 px-4 py-3 text-sm text-slate-300">考えています...（数十秒かかることがあります）</div></div>`);
+      }
+      chatLogEl.innerHTML = items.length
+        ? items.join("")
+        : `<p class="text-sm text-slate-400">ここに会話が表示されます。下の例のボタンを押すか、質問を入力してください。</p>`;
+      chatLogEl.scrollTop = chatLogEl.scrollHeight;
+    }
+
+    function renderConversationSelect() {
+      const options = [];
+      if (!current.id) options.push(`<option value="">新しい会話（まだ保存されていません）</option>`);
+      conversations.forEach((conversation) => {
+        const label = `${formatDateTime(conversation.updated_at)}　${conversation.title || "（無題）"}（${modelInfo(conversation.model).short}）`;
+        options.push(`<option value="${conversation.id}">${escapeHtml(label)}</option>`);
+      });
+      conversationSelectEl.innerHTML = options.join("");
+      conversationSelectEl.value = current.id || "";
+      conversationSelectEl.disabled = sending;
+      deleteChatBtn.disabled = sending || !current.id;
+    }
+
+    // 会話の途中でモデルを変えると、思考の記録やキャッシュが引き継がれないので、会話を始めたら固定する
+    function renderModelSelect() {
+      modelSelectEl.innerHTML = MODELS.map((model) => `<option value="${model.id}">${model.label}</option>`).join("");
+      modelSelectEl.value = current.model;
+      const started = Boolean(current.id);
+      modelSelectEl.disabled = started || sending;
+      modelNoteEl.textContent = started
+        ? "この会話のモデルです。変えるときは「新しい会話」を押してください。"
+        : modelInfo(current.model).note;
+    }
+
+    function renderAll(pendingQuestion = null) {
+      renderConversationSelect();
+      renderModelSelect();
+      renderChat(pendingQuestion);
+    }
+
+    function setSending(value) {
+      sending = value;
+      sendBtn.disabled = value;
+      newChatBtn.disabled = value;
+      sendBtn.textContent = value ? "送信中..." : "送信";
+    }
+
+    async function loadConversationList() {
+      const { data, error } = await supabaseClient
+        .from(CONVERSATIONS_TABLE)
+        .select("id, model, title, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(LIST_LIMIT);
+      if (error) throw error;
+      conversations = data || [];
+    }
+
+    async function openConversation(id) {
+      const { data, error } = await supabaseClient
+        .from(CONVERSATIONS_TABLE)
+        .select("id, model, title, display")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        current = newConversation();
+        writeStorage(CURRENT_ID_STORAGE_KEY, null);
+        return;
+      }
+      current = { id: data.id, model: data.model, title: data.title, display: data.display || [] };
+      writeStorage(CURRENT_ID_STORAGE_KEY, data.id);
+    }
+
+    // 以前ブラウザに保存していた会話が残っていれば、データベースへ移してからブラウザの分を消す
+    async function importLegacyConversation() {
+      let legacy = null;
+      try {
+        legacy = JSON.parse(readStorage(LEGACY_STORAGE_KEY) || "null");
+      } catch (error) {
+        legacy = null;
+      }
+      if (!legacy || !Array.isArray(legacy.history) || !legacy.history.length) {
+        writeStorage(LEGACY_STORAGE_KEY, null);
+        return null;
+      }
+      const firstQuestion = (legacy.display || []).find((item) => item.role === "user");
+      const { data, error } = await supabaseClient
+        .from(CONVERSATIONS_TABLE)
+        .insert({
+          // モデルを選べるようになる前の会話は Opus 5.5 で始めたもの（既定のモデルではなく、そのとき使ったモデルで続ける）
+          model: MODELS.some((model) => model.id === legacy.model) ? legacy.model : "claude-opus-5-5",
+          title: firstQuestion ? firstQuestion.text.slice(0, 40) : "以前の会話",
+          history: legacy.history,
+          display: legacy.display || []
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      writeStorage(LEGACY_STORAGE_KEY, null);
+      return data.id;
+    }
+
+    async function loadChat() {
+      setStatus("会話を読み込んでいます...");
+      try {
+        const importedId = await importLegacyConversation();
+        await loadConversationList();
+        // このデバイスで最後に開いていた会話、なければ一番新しい会話を開く
+        const rememberedId = importedId || readStorage(CURRENT_ID_STORAGE_KEY);
+        const targetId = conversations.some((conversation) => conversation.id === rememberedId)
+          ? rememberedId
+          : (conversations[0] && conversations[0].id);
+        if (targetId) await openConversation(targetId);
+        else current = newConversation();
+        renderAll();
+        setStatus(importedId
+          ? "このブラウザに残っていた会話を保存しました。ほかのデバイスからも続けられます。"
+          : `${conversations.length}件の会話を読み込みました。`);
+      } catch (error) {
+        renderAll();
+        setStatus(`会話を読み込めませんでした: ${error.message}（Supabase で darts_chat_supabase.sql を実行したか確認してください）`, true);
+      }
+    }
+
+    // Edge Function がエラーを返したときは、本文の error を取り出して表示する
+    async function errorMessageOf(error) {
+      try {
+        const body = await error.context.json();
+        if (body && body.error) return body.error;
+      } catch (parseError) {
+        // 本文が JSON でなければ、元のメッセージを使う
+      }
+      return error.message;
+    }
+
+    async function sendQuestion() {
+      const question = questionEl.value.trim();
+      if (!question || sending) return;
+
+      setSending(true);
+      renderAll(question);
+      setStatus("Claude に質問しています...");
+
+      const { data, error } = await supabaseClient.functions.invoke(CHAT_FUNCTION, {
+        body: { conversationId: current.id, question, model: current.model }
+      });
+
+      if (error || !data || data.error) {
+        setSending(false);
+        const message = error ? await errorMessageOf(error) : (data && data.error) || "答えを受け取れませんでした。";
+        renderAll();
+        setStatus(message, true);
+        return;
+      }
+
+      // 保存はサーバー側で済んでいるので、返ってきた会話をそのまま表示する
+      current = { id: data.conversationId, model: current.model, title: current.title || question.slice(0, 40), display: data.display };
+      writeStorage(CURRENT_ID_STORAGE_KEY, current.id);
+      questionEl.value = "";
+      try {
+        await loadConversationList();
+      } catch (listError) {
+        // 一覧の更新に失敗しても、会話自体は保存済み
+      }
+      setSending(false);
+      renderAll();
+      setStatus("答えを受け取りました。");
+    }
+
+    async function showForSession(session) {
+      const loggedIn = Boolean(session);
+      loginPanel.classList.toggle("hidden", loggedIn);
+      chatPanel.classList.toggle("hidden", !loggedIn);
+      if (loggedIn) {
+        await loadChat();
+      } else {
+        setStatus("ログインしてください。");
+      }
+    }
+
+    loginBtn.addEventListener("click", async () => {
+      loginBtn.disabled = true;
+      setStatus("ログインしています...");
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: emailEl.value.trim(),
+        password: passwordEl.value
+      });
+      loginBtn.disabled = false;
+      passwordEl.value = "";
+      if (error) {
+        setStatus(`ログインできませんでした: ${error.message}`, true);
+        return;
+      }
+      await showForSession(data.session);
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      conversations = [];
+      current = newConversation();
+      await showForSession(null);
+    });
+
+    newChatBtn.addEventListener("click", () => {
+      current = newConversation();
+      writeStorage(CURRENT_ID_STORAGE_KEY, null);
+      renderAll();
+      setStatus("新しい会話を始めます。最初の質問のときに、練習データを読み込みます。");
+    });
+
+    conversationSelectEl.addEventListener("change", async () => {
+      const id = conversationSelectEl.value;
+      if (!id) return;
+      setStatus("会話を読み込んでいます...");
+      try {
+        await openConversation(id);
+        renderAll();
+        setStatus("会話を開きました。続けて質問できます。");
+      } catch (error) {
+        setStatus(`会話を開けませんでした: ${error.message}`, true);
+      }
+    });
+
+    deleteChatBtn.addEventListener("click", async () => {
+      if (!current.id || !confirm("この会話を削除しますか？ほかのデバイスからも見られなくなります。")) return;
+      const { error } = await supabaseClient.from(CONVERSATIONS_TABLE).delete().eq("id", current.id);
+      if (error) {
+        setStatus(`削除できませんでした: ${error.message}`, true);
+        return;
+      }
+      current = newConversation();
+      writeStorage(CURRENT_ID_STORAGE_KEY, null);
+      await loadConversationList();
+      renderAll();
+      setStatus("会話を削除しました。");
+    });
+
+    modelSelectEl.addEventListener("change", () => {
+      current.model = modelSelectEl.value;
+      writeStorage(MODEL_STORAGE_KEY, current.model);
+      renderModelSelect();
+    });
+
+    sendBtn.addEventListener("click", sendQuestion);
+    questionEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        sendQuestion();
+      }
+    });
+    document.querySelectorAll(".preset-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        questionEl.value = button.dataset.preset;
+        questionEl.focus();
+      });
+    });
+
+    (async () => {
+      if (!supabaseClient) {
+        setStatus("Supabaseクライアントを初期化できませんでした。", true);
+        return;
+      }
+      const { data } = await supabaseClient.auth.getSession();
+      await showForSession(data.session);
+    })();
+  </script>
+</body>
+
+</html>

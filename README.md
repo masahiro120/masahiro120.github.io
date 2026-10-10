@@ -39,6 +39,8 @@
 		- `darts.html`（カウントアップの入力・分析。Supabase の `darts_games` / `darts_throws` を使用）
 		- `darts_supabase.sql`（テーブル・RLS・保存用関数の定義）
 		- `darts_target_migration.sql`（既存の環境にゲームごとの「狙い」を追加する移行用 SQL）
+		- `chat.html`（練習データをもとに Claude に相談するチャット。ログインした本人だけが使える）
+		- `darts_chat_supabase.sql`（チャットの会話を保存する表。本人だけが読み書きできる）
 	- `quadratic_function/`
 		- `quadratic.html`
 		- `quadratic_old.html`
@@ -60,6 +62,12 @@
 	- `supabase/`
 		- `supabase.html`
 		- `supabase_sleep.html`
+
+## Supabase Edge Function
+
+- `supabase/functions/darts-chat/index.ts`：ダーツ相談チャット（`hobby/darts/chat.html`）のサーバー側。Claude API を呼び出す
+  - 秘密の設定：`ANTHROPIC_API_KEY`（Claude の API キー）、`ALLOWED_EMAIL`（チャットを使えるアカウントのメールアドレス）
+  - チャット追加前の状態にはタグ `before-darts-chat` で戻せる
 
 ## 実行方法
 

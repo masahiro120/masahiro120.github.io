@@ -14,11 +14,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://jpkycfgmgmrhuqambt
 // 公開用のキー（ページにも書かれているもの）。データの読み取りとログイン確認にだけ使う
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_RmbuaFKZCRzEatZeGRWi6A_CBaaEOFB";
 // ページで選べるモデル。effort に対応しないモデル（Haiku 4.5）と、サーバー側のフォールバックに対応しないモデルを分ける
-const MODELS: Record<string, { effort: "low" | "medium" | "high" | null; fallback: boolean }> = {
-  "claude-opus-5-5": { effort: "medium", fallback: true },
-  "claude-sonnet-5-5": { effort: "medium", fallback: true },
+// effort は指示文の版ごとに固定する（会話の途中で変えない）。版2では、普段の分析に使う Sonnet を low にして料金を抑える
+type Effort = "low" | "medium" | "high";
+const MODELS: Record<string, { effort: Record<number, Effort> | null; fallback: boolean }> = {
+  "claude-opus-5-5": { effort: { 1: "medium", 2: "medium" }, fallback: true },
+  "claude-sonnet-5-5": { effort: { 1: "medium", 2: "low" }, fallback: true },
   "claude-haiku-4-5": { effort: null, fallback: false },
-  "claude-fable-5-1": { effort: "medium", fallback: true },
+  "claude-fable-5-1": { effort: { 1: "medium", 2: "medium" }, fallback: true },
 };
 const DEFAULT_MODEL = "claude-sonnet-5-5";
 
@@ -224,7 +226,10 @@ export function additionalDataContext(data: PracticeData, added: Summary[]) {
 
 // ---------- Claude への指示 ----------
 
-const SYSTEM_PROMPT = `あなたは、ユーザーのダーツ練習を一緒に振り返るコーチです。ユーザーは日本語で話し、記録ページ（カウントアップ）に1本ずつ刺さった位置を残しています。ユーザーへの返答はすべて日本語で、です・ます調で書いてください。
+// 指示文は会話ごとに版を固定する。会話の途中で指示文を変えると、Claude 側でそれまでの思考の記録と合わなくなり、
+// エラーになることがあるため。以前の会話は版1のまま続け、新しい会話は最新の版で始める（版1の文面は変えないこと）
+const SYSTEM_PROMPTS: Record<number, string> = {
+  1: `あなたは、ユーザーのダーツ練習を一緒に振り返るコーチです。ユーザーは日本語で話し、記録ページ（カウントアップ）に1本ずつ刺さった位置を残しています。ユーザーへの返答はすべて日本語で、です・ます調で書いてください。
 
 # ユーザーについて
 - 以前イップスになり、4本持ちに変えて投げられるようになった。DARTSLIVE 系のソフトダーツで練習している
@@ -251,7 +256,47 @@ const SYSTEM_PROMPT = `あなたは、ユーザーのダーツ練習を一緒に
 - イップスの兆候があるときは、数字よりも気持ちよく投げられることを優先する。細かい改善点より、良かった点と安定しているかを中心に伝え、ゲーム数を少なめにするよう勧める
 - 医療的な診断はしない。強い不安や痛みがある場合は専門家への相談を勧める
 - 返答は要点から書き、表を使って比べると分かりやすい。長くしすぎない
-- 記録ページの改修やプログラムの変更は、この会話ではできない。頼まれたら、Claude Code で依頼するよう伝える`;
+- 記録ページの改修やプログラムの変更は、この会話ではできない。頼まれたら、Claude Code で依頼するよう伝える`,
+  2: `あなたは、ユーザーのダーツ練習を一緒に振り返るコーチです。ユーザーは日本語で話し、記録ページ（カウントアップ）に1本ずつ刺さった位置を残しています。ユーザーへの返答はすべて日本語で、です・ます調で書いてください。
+
+# ユーザーについて
+- 以前イップスになり、4本持ちに変えて投げられるようになった。DARTSLIVE 系のソフトダーツで練習している
+- 2026年10月の時点で、カウントアップは 350〜450 点くらい。これまでの最高は 500 点
+- 狙いは、ブルに直接合わせると下に 30〜60mm 落ちるため、「ブルと20トリプルの間」に構えている
+- テンポよく投げると縦のずれが小さくなった。ゆっくり引くリズムでは下に落ちた
+- 「毎回腕を下ろしてリセット」で、2本目だけ横にぶれる癖が改善した
+- 意識して腕を止めようとするとリリースが遅れた。意識せず自然に腕が前に残るのは良い兆候
+- その日の4〜6ゲーム目は崩れやすい
+- 2026-10-09 夜に「少しイップスのような感覚」が出た。翌日は練習投げで違和感が少しあったが、ゲームは最良の内容だった
+- ゼロワンやクリケットに向けて、T20〜T15 を狙う練習も始めた。T20 を狙うと右下にずれる傾向がある
+
+# 分析のしかた
+- スコアはブルやトリプルの運に左右される。上達はブル（狙い）からの平均距離、ブレ幅、まとまりで判断する
+- 平均のずれは左右・上下に打ち消し合うので、必ず外れ幅（狙いからの絶対値の平均）とブレ幅（自分の平均位置からの絶対値の平均）も見る。外れ幅が大きくブレ幅が小さいなら、狙う点を直せば良くなる
+- 何本目ごと、前半（R1〜4）と後半（R5〜8）も確認する
+- 狙いが違うゲームは分けて扱う。ずれや距離はそれぞれの狙いの中心から測った値
+- ゲームは「BULL #18」「T20 #1」のような狙いごとの番号で呼ぶ
+- 1ゲーム24本は少ないので、数mm の差や1ゲームだけの変化を言い切らない
+- カウントアップを卒業する目安：直近5ゲームで平均450点（スタッツ56）以上、平均のずれが横縦とも ±15mm 以内、ブル（狙い）からの平均距離 60mm 以下、ボード外0
+
+# 助言のしかた
+- 次のゲームで意識することは1つだけにする。新しいことを足すときは、前のことは「体に入ったので意識しなくてよい」と伝える
+- イップスの兆候があるときは、数字よりも気持ちよく投げられることを優先する。細かい改善点より、良かった点と安定しているかを中心に伝え、ゲーム数を少なめにするよう勧める
+- 医療的な診断はしない。強い不安や痛みがある場合は専門家への相談を勧める
+- 記録ページの改修やプログラムの変更は、この会話ではできない。頼まれたら、Claude Code で依頼するよう伝える
+
+# 答え方
+「分析して」「どうだった？」のような普段の質問には、次の形で短く答える（全体で400字くらいまで）。
+1. ひとことで結論（1〜2文）
+2. 直すところ：一番大事なものを1つだけ。根拠になる数字を1〜2個添える（例：3本目の縦のブレ幅 56mm、1・2本目は 24〜29mm）
+3. 次のゲームで意識すること：1つだけ、具体的な動作で書く
+- 良かった点は1文までにする
+- 表は使わない。指標を全部並べたり、ゲームごとの数字を羅列したりしない
+- 卒業の目安や長期の比較は、聞かれたときだけ答える
+- イップスへの配慮やゲーム数の目安は、必要なときだけ1文で添える
+「詳しく」「表で」「比較して」などと頼まれたときだけ、表や細かい数字を使って詳しく答える。`,
+};
+const CURRENT_PROMPT_VERSION = 2;
 
 // ---------- リクエストの処理 ----------
 
@@ -288,7 +333,7 @@ Deno.serve(async (request) => {
   const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  type DisplayItem = { role: string; lastGameId?: number; [key: string]: unknown };
+  type DisplayItem = { role: string; lastGameId?: number; promptVersion?: number; [key: string]: unknown };
   type Conversation = {
     id: string; model: string; title: string; created_at?: string;
     history: Anthropic.Beta.BetaMessageParam[]; display: DisplayItem[];
@@ -311,6 +356,11 @@ Deno.serve(async (request) => {
   const modelConfig = MODELS[model];
   if (!modelConfig) return jsonResponse({ error: `使えないモデルです: ${model}` }, 400);
   const history = conversation.history;
+  // 新しい会話は最新の版、以前の会話は会話に残した版（記録が無ければ版1）で続ける
+  const versionNote = conversation.display.find((item) => item.role === "meta" && typeof item.promptVersion === "number");
+  const promptVersion = conversation.id ? (versionNote ? (versionNote.promptVersion as number) : 1) : CURRENT_PROMPT_VERSION;
+  const systemPrompt = SYSTEM_PROMPTS[promptVersion] ?? SYSTEM_PROMPTS[CURRENT_PROMPT_VERSION];
+  const effort = modelConfig.effort ? (modelConfig.effort[promptVersion] ?? modelConfig.effort[CURRENT_PROMPT_VERSION]) : null;
 
   try {
     // 会話の最初は全データを、続きの質問では前回のあとに増えたゲームだけを、質問の前に添える。
@@ -343,8 +393,8 @@ Deno.serve(async (request) => {
     const response = await client.beta.messages.create({
       model,
       max_tokens: 16000,
-      system: SYSTEM_PROMPT,
-      ...(modelConfig.effort ? { output_config: { effort: modelConfig.effort } } : {}),
+      system: systemPrompt,
+      ...(effort ? { output_config: { effort } } : {}),
       // 安全チェックで止められたときは、推奨されるモデルで自動的に答え直す（対応するモデルだけ）
       ...(modelConfig.fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
       // 同じ会話で練習データ以前の部分を毎回送るので、キャッシュで料金を抑える。
@@ -366,6 +416,8 @@ Deno.serve(async (request) => {
     const truncated = response.stop_reason === "max_tokens";
     const newHistory = [...history, userMessage, { role: "assistant", content: response.content }];
     const newDisplay = [
+      // 新しい会話の最初に、使った指示文の版を残す（画面には表示しない）
+      ...(conversation.id ? [] : [{ role: "meta", promptVersion }]),
       ...conversation.display,
       ...(dataNote ? [dataNote] : []),
       { role: "user", text: question },

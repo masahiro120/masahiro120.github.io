@@ -83,7 +83,7 @@
       top: 0;
       right: 0;
       z-index: 50;
-      /* 滑り込ませる動きを付けると、開く途中で読み込み直したチャットが描かれないことがあるので、表示・非表示だけを切り替える */
+      /* 閉じている間は非表示。開くときは表示してから横から滑り込ませ、閉じるときは滑り出させてから非表示にする */
       display: none;
       flex-direction: column;
       width: min(var(--chat-dock-width), 100vw);
@@ -91,10 +91,29 @@
       background: #0f172a;
       border-left: 1px solid #334155;
       box-shadow: -12px 0 30px rgba(2, 6, 23, 0.5);
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+    }
+
+    .chat-dock.shown {
+      display: flex;
     }
 
     .chat-dock.open {
-      display: flex;
+      transform: none;
+    }
+
+    /* 広い画面で記録の画面が左に寄る動きも、パネルに合わせる */
+    body {
+      transition: padding-right 0.25s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .chat-dock,
+      body {
+        transition: none;
+      }
     }
 
     .chat-dock iframe {
@@ -1426,10 +1445,43 @@
       const OPEN_KEY = "darts.chatDock.open";
       const wideScreen = () => window.matchMedia("(min-width: 1100px)").matches;
 
+      const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // 滑り込み・滑り出しが終わったら呼ぶ（transitionend が来ないときのために時間でも確かめる）
+      function afterSlide(callback) {
+        if (reducedMotion()) {
+          callback();
+          return;
+        }
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          dock.removeEventListener("transitionend", onEnd);
+          callback();
+        };
+        const onEnd = (event) => {
+          if (event.target === dock && event.propertyName === "transform") finish();
+        };
+        dock.addEventListener("transitionend", onEnd);
+        setTimeout(finish, 400);
+      }
+
       function setOpen(open) {
-        // 初めて開いたときにチャットを読み込む
-        if (open && !frame.src) frame.src = "chat.html?embed=1";
-        dock.classList.toggle("open", open);
+        if (open) {
+          // 表示してから次の描画で滑り込ませる。チャットは滑り込み終わってから読み込む（途中で読み込むと描かれないことがあるため）
+          dock.classList.add("shown");
+          void dock.offsetWidth;
+          dock.classList.add("open");
+          afterSlide(() => {
+            if (dock.classList.contains("open") && !frame.getAttribute("src")) frame.src = "chat.html?embed=1";
+          });
+        } else {
+          dock.classList.remove("open");
+          afterSlide(() => {
+            if (!dock.classList.contains("open")) dock.classList.remove("shown");
+          });
+        }
         dock.setAttribute("aria-hidden", String(!open));
         document.body.classList.toggle("chat-dock-open", open);
         // 右下のボタン1つで開閉する（開いている間は「閉じる」）

@@ -517,6 +517,8 @@
       const question = questionEl.value.trim();
       if (!question || sending) return;
 
+      // 送信したらすぐに入力欄を空にする（送れなかったときは元に戻す）
+      questionEl.value = "";
       setSending(true);
       renderAll(question);
       setStatus("Claude に質問しています...");
@@ -528,6 +530,7 @@
       if (error || !data || data.error) {
         setSending(false);
         const message = error ? await errorMessageOf(error) : (data && data.error) || "答えを受け取れませんでした。";
+        if (!questionEl.value) questionEl.value = question;
         renderAll();
         setStatus(message, true);
         return;
@@ -536,7 +539,6 @@
       // 保存はサーバー側で済んでいるので、返ってきた会話をそのまま表示する
       current = { id: data.conversationId, model: current.model, title: current.title || question.slice(0, 40), display: data.display };
       writeStorage(CURRENT_ID_STORAGE_KEY, current.id);
-      questionEl.value = "";
       try {
         await loadConversationList();
       } catch (listError) {
@@ -644,7 +646,8 @@
 
     sendBtn.addEventListener("click", sendQuestion);
     questionEl.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      // 日本語入力の変換中の Enter は送信しない
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing) {
         event.preventDefault();
         sendQuestion();
       }

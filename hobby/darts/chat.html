@@ -608,6 +608,8 @@
       }
       if (!opener) return;
       event.preventDefault();
+      // 記録のタブに、チャットのパネルを開き直して最新の会話を読み込むよう伝える
+      opener.postMessage({ type: "darts-chat-returned" }, location.origin);
       opener.focus();
       window.close();
       // ブラウザの都合で閉じられなかったときは、このタブで記録のページへ移る

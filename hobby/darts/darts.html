@@ -1460,6 +1460,13 @@
         }
       });
 
+      // 別ページのチャットから「記録へ」で戻ってきたら、パネルを開き直し、別ページで続けた会話も表示する
+      window.addEventListener("message", (event) => {
+        if (event.origin !== location.origin || !event.data || event.data.type !== "darts-chat-returned") return;
+        if (frame.src) frame.contentWindow.location.reload();
+        setOpen(true);
+      });
+
       fab.addEventListener("click", () => setOpen(true));
       closeBtn.addEventListener("click", () => setOpen(false));
       link.addEventListener("click", (event) => {
